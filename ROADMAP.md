@@ -70,6 +70,8 @@ HDR nits (650), orientation, brightness curve, refresh; controller emulation typ
 
 Currently: Armada on the SD card (`mmcblk0`, 953 GB, btrfs `/var`), stock Android intact on UFS (`sda`, 464 GB). The installer shrinks Android `userdata` (Android is factory-reset: user data wiped, system kept, dual-boot) and ABL keeps an UNINSTALL CFW fallback; `armada-installer reset` gives the space back. Reasons to stay on SD during tuning: pull-the-card recovery, Android untouched for comparisons and warranty, and nothing in B1–B7 depends on storage speed. Revisit with load-time and power measurements once tuning is stable. Requires D-7 steps.
 
+**Evidence so far (2026-09-05, live during a Steam download on Eco):** Wi-Fi healthy (−57 dBm, 1.7 Gbit link, `ath12k_thermal cur_state=0`, no cpufreq throttling), yet net RX ≈ 10.8 MB/s while `mmcblk0` wrote ≈ 60 MB/s and IO pressure "some" sat at 18–20%. Steam's displayed speed "trickled toward 0" because its disk-write queue backed up — the **SD card write path is the download bottleneck**, worsened by Eco's CPU cap on decompression. Downloads/installs are the one workload the SD card visibly hurts; gaming reads are far less affected. This is the strongest argument for an internal install so far; it does not change the "stay on SD during tuning" call.
+
 ## B9 — Upstream contributions
 
 Anything general goes back: per-device fan curve defaults in `ayn-odin-3.conf`, a corrected SM8750 frequency table, any bug found. Branch from `main`, cherry-pick, PR. Protocol docs never ride along.
