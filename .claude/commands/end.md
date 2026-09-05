@@ -97,7 +97,7 @@ Summary field hard cap ~300 chars. A post-/end **mini-wrap** line covers ONLY th
 
 `git status`, then stage the bookkeeping (`docs/CURRENT_STATE.md`, `docs/HANDOFF_LOG.md`, `docs/SESSION_LEDGER.md`, `docs/CODEBASE_INDEX.md`, `docs/DEVICE.md` if touched) plus any work the user confirmed. Commit: `Session: <one-line summary>`. Then `git push`.
 
-Pushes to `origin/odin3-tuning` at `/end` are pre-authorized (`DECISIONS.md` → D-3). **`--force` of any kind is NOT covered by that** — the only sanctioned force is `git push --force-with-lease origin odin3-tuning` immediately after a user-approved rebase (D-2). If a plain push is rejected, report it and let the user decide; do not retry destructively.
+Pushes to `origin/odin3-tuning` at `/end` are pre-authorized (`DECISIONS.md` → D-3). **`--force` of any kind is NOT covered by that** — the only sanctioned force is `git push --force-with-lease origin odin3-tuning` immediately after a rebase (D-2). If a plain push is rejected, report it and let the user decide; do not retry destructively.
 
 ### Step 4a — Clean-tree guarantee (non-negotiable)
 

@@ -121,18 +121,24 @@ def cmd_probe(_: argparse.Namespace) -> None:
 
 def cmd_pull(_: argparse.Namespace) -> None:
     DEVICE_STATE.mkdir(exist_ok=True)
-    got, missing = [], []
+    # Ask the device which files exist FIRST, so a transport failure is never
+    # reported as "absent" (2026-09-05: a pull during a reboot said two configs
+    # were gone when scp had simply failed).
+    present = set(ssh("for f in " + " ".join(PULL_FILES) + "; do [ -e \"$f\" ] && echo \"$f\"; done", check=False).split())
+    got, absent, failed = [], [], []
     for remote in PULL_FILES:
+        if remote not in present:
+            absent.append(remote)
+            continue
         local = DEVICE_STATE / remote.lstrip("/").replace("/", "__")
-        if scp_from(remote, local):
-            got.append(local.name)
-        else:
-            missing.append(remote)
+        (got if scp_from(remote, local) else failed).append(remote)
+    if failed:
+        raise SystemExit(f"pull FAILED for {', '.join(failed)} — device-state not stamped; retry when the device is up.")
     stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     (DEVICE_STATE / "PULLED_AT.txt").write_text(f"{stamp} from {host()}\n", encoding="utf-8")
-    print("pulled:", ", ".join(got) or "(nothing)")
-    if missing:
-        print("absent on device (fine if never set):", ", ".join(missing))
+    print("pulled:", ", ".join(pathlib.PurePosixPath(g).name for g in got) or "(nothing)")
+    if absent:
+        print("absent on device (fine if never set):", ", ".join(absent))
     diff = subprocess.run(["git", "-C", str(REPO), "status", "--short", "--", "device-state"],
                           capture_output=True, text=True).stdout
     print("\ngit status device-state/:\n" + (diff or "  (no change vs HEAD)"))

@@ -19,7 +19,7 @@ The plan and where we are: [`ROADMAP.md`](./ROADMAP.md). Why things are the way 
 | Area | Choice |
 |---|---|
 | Repo shape | Fork of `armada-os/armada`. `main` mirrors upstream, never committed to. Work on **`odin3-tuning`**. (D-1) |
-| Staying current | **Rebase** onto `upstream/main`, `--force-with-lease` to our branch, user-approved, at quiet points. `git rerere` on. (D-2) |
+| Staying current | **Rebase** onto `upstream/main`, `--force-with-lease` to our branch. Claude's call at quiet points, always reported. `git rerere` on. (D-2) |
 | Pushes | Plain push at `/end` pre-authorized. No other force pushes. (D-3) |
 | Where tuning lives | Device `/etc` first; image rebuild is its own late block. UI-owned configs are tuned through Armada Control and **recorded** in `device-state/`; repo-owned files live in `device-overlay/` and are **pushed**. (D-4) |
 | Codebase index | Scoped to the fork delta. A modified upstream file's entry says why we diverged. (D-5) |

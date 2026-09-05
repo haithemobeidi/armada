@@ -10,7 +10,7 @@ Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised 
 
 | # | Block | Status | Gate to close |
 |---|---|---|---|
-| B0 | Protocol + device access | ⬅ CURRENT — scaffold written, SSH key installed, first snapshot taken | Hooks verified live in a fresh session; `tools/` pull works; first `/end` clean |
+| B0 | Protocol + device access | ⬅ CURRENT — scaffold committed + pushed, rebased onto upstream `14230df`, `tools/odin.py` verified, first `/end` run 2026-09-05 | One remaining: the SessionStart hook seen working in a fresh session (ledger L-2) |
 | B1 | Baseline instrumentation | queued | A logger that records temp / PWM / CPU+GPU freq / battery power every few seconds to a CSV, pulled to the PC; one real 30-min play session and one idle session recorded |
 | B2 | Fan + thermal | queued | Fan silent at idle and light load; whine band identified by ear vs PWM; ramp/curve tuned; user signs off after a week of use |
 | B3 | Power profiles + per-game performance | queued | A quiet-but-fast profile between Balanced and Performance; FPS cap / resolution / FEX preset defaults set for the owner's library; before/after temps and battery draw recorded |
@@ -42,13 +42,13 @@ Facts from the code: `armada-powerd` ticks every 3 s, reads the average of the t
 
 The first assessment's phased fan plan (Opus, 2026-09-04) is at <https://claude.ai/code/artifact/48150c05-19f5-4ca3-b267-cd4a0d91476f>; its phases 0–3 map onto B1–B3 here with the corrections noted in B0.
 
-**User reports (instruments too):** 2026-09-05 — Balanced `gpu_max` 1.0→0.80 "reduced the high-pitched sound a bit" while gaming. Same day, during a Steam download (CPU-bound decompression) the whine was "pretty loud" on Balanced; switching to **Eco** "did help" but download speed dropped noticeably. So the tone tracks load-driven PWM and is software-movable; Eco's `large` cap (51%/48%) is too blunt for downloads — a download-oriented middle setting is a B3 candidate.
+**User reports (instruments too):** 2026-09-05 — Balanced `gpu_max` 1.0→0.80 "reduced the high-pitched sound a bit" while gaming. Same day, during a Steam download (CPU-bound decompression) the whine was "pretty loud" on Balanced; switching to **Eco** "did help" but download speed dropped noticeably. So the tone tracks load-driven PWM and is software-movable; Eco's `large` cap (51%/48%) is too blunt for downloads — a download-oriented middle setting is a B3 candidate. Later the same night: **Performance** during a shader compile took the fan to max and it stayed loud ~2 min after switching back — both by design (`performance` governor, `gpu_min=1.0`, aggressive curve; `ramp_down=6` per 3 s tick ≈ 102 s from 255 to 51). The user experienced the slow unwind as "the fan kept going" — that is the B2 `ramp_down` target, measured from a real event. The game froze at the same time (ledger L-6; journal clean).
 
 Plan: via the **Fans tab** (UI-owned, D-4) create an `odin3` curve with a 0-PWM floor up to the measured idle temperature, a steep segment through the whine band found in B1, and gentler slopes above; raise `ramp_down`; keep `[suspend]` safety values. Verify the fan restarts from a full stop (some fans need a kick). One variable per pause. Hardware track in parallel: warranty/RMA check with AYN for the ~9 kHz early-unit tone before any physical work.
 
 ## B3 — Power profiles + per-game performance
 
-Levers that exist: `cpu_underclock` tiers (frequency caps → lower DVFS voltage; the only "undervolt" Qualcomm exposes), `cpu_max`, `gpu_min/gpu_max`, governor; per-game FEX preset, resolution, CPU core set / Wine topology, nice, RT scheduling, scheduler (`eevdf`/`cosmos`/`lavd`), gamescope nice. Goal: a Balanced that is quiet but does not leave performance on the table, plus per-game defaults for the owner's actual library. Frame-rate caps and resolution (GPU idles between frames) are preferred over blanket `gpu_max` caps. Measure: temps, PWM, battery W, and the owner's perceived smoothness.
+Levers that exist: `cpu_underclock` tiers (frequency caps → lower DVFS voltage; the only "undervolt" Qualcomm exposes), `cpu_max`, `gpu_min/gpu_max`, governor; per-game FEX preset, resolution, CPU core set / Wine topology, nice, RT scheduling, scheduler (`eevdf`/`cosmos`/`lavd`), gamescope nice. Goal: a Balanced that is quiet but does not leave performance on the table, plus per-game defaults for the owner's actual library. Also question Performance's `gpu_min=1.0`: it pins the GPU at 832 MHz even during CPU-only work like shader compilation, which is heat and fan for nothing (observed 2026-09-05, L-6). Frame-rate caps and resolution (GPU idles between frames) are preferred over blanket `gpu_max` caps. Measure: temps, PWM, battery W, and the owner's perceived smoothness.
 
 ## B4 — Battery + sleep
 

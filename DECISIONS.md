@@ -26,6 +26,8 @@ Append-only log of decisions that shape how this fork is worked on. Each entry: 
 
 Upstream lands several merges a day, so the merge path would make our delta unreadable within weeks. The fork's branch has a single author, which is what makes force-with-lease safe: the lease fails if anyone else pushed.
 
+**Amended 2026-09-05 (same day):** the user delegated repo mechanics outright — "whatever you think for the repo … I'm not a developer … go with what works best for our use case." Rebases are therefore **Claude's call at a quiet point**: clean tree, never inside `/start` or `/end`, never leaving a conflict half-resolved, and **always reported** in the status line and the handoff. `--force-with-lease` to `origin/odin3-tuning` right after a rebase remains the only permitted force push. Anything touching the device's boot path is unaffected by this delegation (D-7 still requires a per-instance go). First rebase under this rule: 2026-09-05, `33e0319 → 14230df`, five commits replayed, no conflicts.
+
 **Revisit if:** a second person starts committing to `odin3-tuning`.
 
 ## D-3 — Session-end pushes are pre-authorized (2026-09-05)
