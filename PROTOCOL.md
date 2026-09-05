@@ -46,7 +46,7 @@ The single source of truth for **project status** is the **"📊 status at a gla
 | `odin3-tuning` | The working branch — our delta as a stack on top of upstream | All sessions run here. Pushed to `origin`. |
 | `pr/<topic>` | A branch cut from `main` for an upstream PR | Cherry-pick the relevant commits from `odin3-tuning`. Protocol docs never ride into a PR. |
 
-**Staying current:** `odin3-tuning` is **rebased** onto `upstream/main` (not merged), so `git log upstream/main..odin3-tuning` is always exactly our delta. A rebase rewrites history and is pushed with `git push --force-with-lease origin odin3-tuning`. It is a **user-approved action at a quiet point** — never at session start, never inside `/end`. `git rerere` is enabled so a conflict resolved once is replayed automatically next time. Full rationale: `DECISIONS.md` → D-2.
+**Staying current:** `odin3-tuning` is **rebased** onto `upstream/main` (not merged), so `git log upstream/main..odin3-tuning` is always exactly our delta. A rebase rewrites history and is pushed with `git push --force-with-lease origin odin3-tuning`. It is **Claude's call at a quiet point** (clean tree; never during `/start` or `/end`) and is **always reported** — the user delegated repo mechanics (D-2, amended). `git rerere` is enabled so a conflict resolved once is replayed automatically next time. Full rationale: `DECISIONS.md` → D-2.
 
 **Other machine caveat:** after a rebase, a stale clone elsewhere must `git fetch && git reset --hard origin/odin3-tuning` (not `git pull`). The SessionStart hook flags this as "diverged" and stops.
 
@@ -66,7 +66,7 @@ The single source of truth for **project status** is the **"📊 status at a gla
 Mostly automatic — the `SessionStart` hook runs Steps 0–3 and injects the docs. Typing `/start` forces the full protocol.
 
 0. **Branch guard.** Not in a worktree, not on `claude/*`, **not on `main`**. Otherwise STOP (see `.claude/commands/start.md`).
-1. **Sync guard, two remotes.** `git fetch origin --prune && git fetch upstream --prune`, then `git status -sb`. Behind origin + clean → `git pull --ff-only`. Dirty-and-behind or diverged → STOP and surface. Upstream drift (`git rev-list --count HEAD..upstream/main`) is **reported as a number, never acted on**.
+1. **Sync guard, two remotes.** `git fetch origin --prune && git fetch upstream --prune`, then `git status -sb`. Behind origin + clean → `git pull --ff-only`. Dirty-and-behind or diverged → STOP and surface. Upstream drift (`git rev-list --count HEAD..upstream/main`) is **reported as a number at start**; the rebase itself happens at the first quiet point of the session, never during start.
 2. Read `docs/CURRENT_STATE.md` (NEXT ACTION), the open `[ ]` lines of `docs/SESSION_LEDGER.md`, the last 5 lines of `docs/HANDOFF_LOG.md`, the ROADMAP spine.
 3. `git update-index --really-refresh`, `git status`, `git log --oneline -5`. Anything dirty is a protocol violation from the last `/end` — flag it.
 4. **CROSS-CHECK (mandatory).** NEXT ACTION vs spine's CURRENT block vs last HANDOFF "Next:" vs recent commits vs open ledger gates. Contradiction → STOP and surface; never pick one silently.

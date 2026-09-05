@@ -222,9 +222,10 @@ def main() -> None:
     else:
         upstream_note = (
             f"📥 **`{UPSTREAM_REF}` has {up_behind} commit(s) not in this branch** "
-            f"(latest: {up_latest}). Rebasing is a USER decision (DECISIONS.md → rebase policy): "
-            "mention the count in the status report and offer to rebase at a quiet point — "
-            "never do it as part of session start.\n"
+            f"(latest: {up_latest}). Rebasing is Claude's call at the first quiet point "
+            "(D-2: clean tree, not during start/end, --force-with-lease, always reported): "
+            "mention the count in the status report and plan the rebase — never do it as "
+            "part of session start.\n"
         )
 
     parts: list[str] = [

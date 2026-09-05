@@ -36,7 +36,7 @@ git rev-list --count HEAD..upstream/main
 | `[ahead N, behind M]` (diverged) | **STOP.** Surface it. Common cause: a rebase pushed from the other machine. Never auto-merge or rebase at session start. |
 | Fetch failed | Proceed, but report currency as **unverified**. |
 
-**Upstream drift is reported, never acted on.** State the count (`upstream/main has N commits we don't`). Rebasing rewrites `odin3-tuning` and requires a force-with-lease push — a user decision made at a quiet point in the session (see `DECISIONS.md` → D-2). Never rebase during session start.
+**Upstream drift is reported at start, acted on later.** State the count (`upstream/main has N commits we don't`). Rebasing rewrites `odin3-tuning` and is pushed with `--force-with-lease`; it is Claude's call at the first quiet point (clean tree, not during `/start` or `/end`) and is always reported (`DECISIONS.md` → D-2, amended). Never rebase during session start.
 
 ## Steps 1–6 — Read state, cross-check, report
 
