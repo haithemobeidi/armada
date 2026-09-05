@@ -42,6 +42,8 @@ Facts from the code: `armada-powerd` ticks every 3 s, reads the average of the t
 
 The first assessment's phased fan plan (Opus, 2026-09-04) is at <https://claude.ai/code/artifact/48150c05-19f5-4ca3-b267-cd4a0d91476f>; its phases 0–3 map onto B1–B3 here with the corrections noted in B0.
 
+**User reports (instruments too):** 2026-09-05 — Balanced `gpu_max` 1.0→0.80 "reduced the high-pitched sound a bit" while gaming. Same day, during a Steam download (CPU-bound decompression) the whine was "pretty loud" on Balanced; switching to **Eco** "did help" but download speed dropped noticeably. So the tone tracks load-driven PWM and is software-movable; Eco's `large` cap (51%/48%) is too blunt for downloads — a download-oriented middle setting is a B3 candidate.
+
 Plan: via the **Fans tab** (UI-owned, D-4) create an `odin3` curve with a 0-PWM floor up to the measured idle temperature, a steep segment through the whine band found in B1, and gentler slopes above; raise `ramp_down`; keep `[suspend]` safety values. Verify the fan restarts from a full stop (some fans need a kick). One variable per pause. Hardware track in parallel: warranty/RMA check with AYN for the ~9 kHz early-unit tone before any physical work.
 
 ## B3 — Power profiles + per-game performance
