@@ -72,6 +72,8 @@ Currently: Armada on the SD card (`mmcblk0`, 953 GB, btrfs `/var`), stock Androi
 
 **Evidence so far (2026-09-05, live during a Steam download on Eco):** Wi-Fi healthy (−57 dBm, 1.7 Gbit link, `ath12k_thermal cur_state=0`, no cpufreq throttling), yet net RX ≈ 10.8 MB/s while `mmcblk0` wrote ≈ 60 MB/s and IO pressure "some" sat at 18–20%. Steam's displayed speed "trickled toward 0" because its disk-write queue backed up — the **SD card write path is the download bottleneck**, worsened by Eco's CPU cap on decompression. Downloads/installs are the one workload the SD card visibly hurts; gaming reads are far less affected. This is the strongest argument for an internal install so far; it does not change the "stay on SD during tuning" call.
 
+**Card vs slot (read from sysfs/debugfs 2026-09-05):** the card is a SanDisk Extreme 1 TB (`SR01T`, 05/2026, U3 / V30 → guaranteed ≥30 MB/s sustained write). The slot negotiates **UHS-I SDR104 at 202 MHz, 4-bit, 1.8 V** — the fastest a UHS-I slot can do, ceiling ≈104 MB/s theoretical, ≈90 MB/s real. The card's advertised 245 MB/s needs SanDisk's proprietary QuickFlow reader and is unreachable here. Disk writes sat at a steady ~60 MB/s across two samples while net RX varied 10.8→17.5 MB/s — a ceiling signature. `/var` is btrfs with `compress=zstd:1` (CPU compression on every write, mostly wasted on already-compressed game data) + CoW; Steam preallocates then writes, so bytes written ≈ 4–5× bytes downloaded. Raw `dd` sequential write/read of the card to be measured in B1 once no download is running.
+
 ## B9 — Upstream contributions
 
 Anything general goes back: per-device fan curve defaults in `ayn-odin-3.conf`, a corrected SM8750 frequency table, any bug found. Branch from `main`, cherry-pick, PR. Protocol docs never ride along.
@@ -88,3 +90,4 @@ Enable Actions on the fork, repoint `ghcr.io/armada-os/armada` refs, confirm whe
 - `armada-powerd`: make `[fan_curve.*]` and `[underclock.*]` defaults device-scoped (`ayn-odin-3.conf`) instead of global — the Phase 4 idea from the first assessment.
 - Investigate why `power_supply/battery/power_now` reports ~67.8 W while current×voltage gives ~4.7 W (unit or scaling bug; matters for B4 logging).
 - Hostname is `fedora`; a device-specific hostname would make mDNS (`odin3.local`) usable instead of hunting IPs.
+- `/var` on the SD card mounts with `compress=zstd:1`. Measure whether disabling compression for the Steam library (a `chattr +m` / nodatacow-style per-directory setting, or a mount option) speeds up installs on the SD card — game data is already compressed, so the CPU spent compressing it may be pure overhead. B8 measurement candidate.
