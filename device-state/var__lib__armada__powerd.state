@@ -1,0 +1,3 @@
+profile=balanced
+gpu_level=auto
+manual_gpu_clock=1100

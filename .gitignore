@@ -4,3 +4,12 @@ _build*
 cosign.key
 __pycache__/
 *.pyc
+
+# Claude Code — protocol state (see PROTOCOL.md)
+.claude/pending-index-updates.txt
+.claude/settings.local.json
+.claude/worktrees/
+
+# Device pulls — raw logs/CSVs captured from the handheld live under
+# device-data/ and are regenerated, never committed (summaries go in docs/).
+device-data/

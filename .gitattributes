@@ -1,0 +1,11 @@
+# This repo builds a Linux OS and its files are pushed to a Linux device.
+# Force LF in the working copy on every platform so a Windows checkout never
+# produces phantom CRLF diffs or ships CRLF into /etc via tools/odin.py push.
+* text=auto eol=lf
+*.png binary
+*.svg text
+*.bin binary
+*.mbn binary
+*.elf binary
+*.sqsh binary
+*.ttf binary
