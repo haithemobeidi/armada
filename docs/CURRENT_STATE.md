@@ -35,14 +35,14 @@ Open: L-3 (user: AYN warranty check), L-4 (user: off-PC copy of the ABL backup �
 
 ## Active blockers
 
-None. Device/repo parity: **overlay v1** (`99-armada-hide-internal-ufs.rules`) pushed 2026-09-06 14:48, reloaded, identical to the repo. `device-state/` re-pulled 2026-09-06 14:48 — identical to the record (Balanced `gpu_max = 0.80` is on the device).
+None. Device/repo parity: **overlay v1** (`99-armada-hide-internal-ufs.rules`) pushed 2026-09-06 14:48, reloaded, identical to the repo. `device-state/` re-pulled 2026-09-06 14:48 — identical to the record (Balanced `gpu_max = 0.80`, re-set by the user after the install).
 
 ---
 
 ## Notes & things to watch
 
 - **Upstream drift: 14 commits** at this `/end` (latest `c68b36a`, bottom-screen brightness persistence) — L-9, rebase at the first quiet point.
-- **Fresh deployments lose `/etc` and `/var`:** SSH off, key gone. The Power-tab `gpu_max = 0.80` was nevertheless present at 14:24 (set again or restored by Armada Control) — worth understanding before B10, when the same question returns. Not an issue after ordinary OTAs (three-way `/etc` merge, D-4).
+- **Fresh deployments lose `/etc` and `/var`:** SSH off, key gone, Power-tab tweaks back to factory (the user re-set `gpu_max = 0.80` by hand at 14:24). Expect the same after any future installer run or the B10 reflash — not after ordinary OTAs (three-way `/etc` merge, D-4). Before B10: keep `device-state/` current so the UI values can be re-applied from the record.
 - **udev overlay files need a reload after `odin.py push`** (README in `device-overlay/` has the command); consider teaching `push` to do it when it sees `udev/rules.d`.
 - **No SD-card rescue any more:** the card is game storage. A rescue means re-flashing a card from the PC (`flash-armada.ps1`) and switching the ABL boot source.
 - `abl.conf auto_update_enabled=1`: the bootloader can update itself at shutdown after an OTA (D-7 awareness).
