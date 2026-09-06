@@ -63,3 +63,13 @@ ABL, partitions, kernel args, the boot image, and any "install to internal stora
 ## D-8 — Whole-OS scope, fan noise first, measurement before every change (2026-09-05)
 
 The user's goal is every aspect of the OS tuned for this device and their use, "A to Z, slowly but sure". The roadmap is organised as blocks by subsystem, fan/thermal first because it is the most audible. Every block opens with a baseline measurement; no change ships without the signal it targets having been recorded before and after (`docs/WORK_STYLE.md` → "Measure before you change").
+
+## D-9 — Install to internal storage; Android kept at 16 GiB (2026-09-06)
+
+The user chose internal storage over the SD card, keeping Android only as a fallback: "I won't use Android, I don't care for it." Grounds: B8's evidence that the SD write path caps Steam downloads at ~60 MB/s (UHS-I slot ceiling), plus the user's stated non-use of Android; this overrides the earlier "stay on SD during tuning" call. The per-instance go D-7 requires was given in this session. It covers exactly one thing: one run of `armada-installer install --userdata-gib 16` (CLI over SSH, or the same choice in the Desktop Mode GUI) with Armada booted from the SD card. Nothing else on the boot path is covered.
+
+**Why 16 GiB.** The installer's floor is 8 GiB (`ANDROID_MIN_MIB`), its GUI default 32 GiB when there is room. 8 boots but leaves nothing once Android's first boot fills its caches and an AYN OTA package stages in `userdata`; 16 removes that worry for 2 % of the disk. Armada needs ~33.6 GiB minimum (512 MiB ESP + 1 GiB boot + 32 GiB root + 64 MiB) and takes everything else.
+
+**What it does.** Deletes and recreates `userdata` at 16 GiB, zeroes its first 8 MiB (Android factory-resets on its next boot: apps and `/sdcard` gone, the Android system partitions kept), creates the three Armada partitions in the freed space, deploys the booted image, and dual-boots. The SD card stays a bootable Armada and is the recovery path until internal boot is verified with the card out. Reverts: `armada-installer reset` from the SD card, or ABL "UNINSTALL CFW & EXPAND USERDATA" — both keep the Android system and factory-reset it again.
+
+**Revisit if:** the internal install fails to boot (stay on SD, run `reset`), or Android is ever wanted for real (reset returns the space).

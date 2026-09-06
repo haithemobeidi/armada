@@ -10,7 +10,7 @@ Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised 
 
 | # | Block | Status | Gate to close |
 |---|---|---|---|
-| B0 | Protocol + device access | ⬅ CURRENT — scaffold committed + pushed, rebased onto upstream `14230df`, `tools/odin.py` verified, first `/end` run 2026-09-05 | One remaining: the SessionStart hook seen working in a fresh session (ledger L-2) |
+| B0 | Protocol + device access | **done 2026-09-06** — scaffold, hooks, `tools/odin.py`; SessionStart hook verified in a fresh session (L-2) | — |
 | B1 | Baseline instrumentation | queued | A logger that records temp / PWM / CPU+GPU freq / battery power every few seconds to a CSV, pulled to the PC; one real 30-min play session and one idle session recorded |
 | B2 | Fan + thermal | queued | Fan silent at idle and light load; whine band identified by ear vs PWM; ramp/curve tuned; user signs off after a week of use |
 | B3 | Power profiles + per-game performance | queued | A quiet-but-fast profile between Balanced and Performance; FPS cap / resolution / FEX preset defaults set for the owner's library; before/after temps and battery draw recorded |
@@ -18,7 +18,7 @@ Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised 
 | B5 | Idle CPU load | queued | The ~4–5 load average seen on the Steam home screen understood and reduced or justified |
 | B6 | Services + boot | queued | Every running service justified for this owner; unneeded ones masked via `/etc`; boot time measured |
 | B7 | Display + input + RGB | queued | HDR/brightness/orientation verified; controller emulation chosen; RGB policy set (off by default saves power); calibration done |
-| B8 | Storage decision | queued | Decide SD vs internal install with data (load times, power); if internal: own backup step, own go (D-7) |
+| B8 | Storage decision | ⬅ CURRENT — **decided: internal, Android 16 GiB** (D-9, go given 2026-09-06); installer **not yet run**, device still boots from the SD card | Installer run with `--userdata-gib 16`; internal boot verified with the SD card out; `docs/DEVICE.md` Storage + Boot rows rewritten (L-7, L-8). Then B1. |
 | B9 | Upstream contributions | queued | Anything general (e.g. per-device fan curve defaults) opened as a PR from a `pr/*` branch |
 | B10 | Image build | queued | Fork CI enabled, registry refs repointed, stable overlay baked, image built and flashed — only after B2–B7 are stable |
 
@@ -73,6 +73,8 @@ Currently: Armada on the SD card (`mmcblk0`, 953 GB, btrfs `/var`), stock Androi
 **Evidence so far (2026-09-05, live during a Steam download on Eco):** Wi-Fi healthy (−57 dBm, 1.7 Gbit link, `ath12k_thermal cur_state=0`, no cpufreq throttling), yet net RX ≈ 10.8 MB/s while `mmcblk0` wrote ≈ 60 MB/s and IO pressure "some" sat at 18–20%. Steam's displayed speed "trickled toward 0" because its disk-write queue backed up — the **SD card write path is the download bottleneck**, worsened by Eco's CPU cap on decompression. Downloads/installs are the one workload the SD card visibly hurts; gaming reads are far less affected. This is the strongest argument for an internal install so far; it does not change the "stay on SD during tuning" call.
 
 **Card vs slot (read from sysfs/debugfs 2026-09-05):** the card is a SanDisk Extreme 1 TB (`SR01T`, 05/2026, U3 / V30 → guaranteed ≥30 MB/s sustained write). The slot negotiates **UHS-I SDR104 at 202 MHz, 4-bit, 1.8 V** — the fastest a UHS-I slot can do, ceiling ≈104 MB/s theoretical, ≈90 MB/s real. The card's advertised 245 MB/s needs SanDisk's proprietary QuickFlow reader and is unreachable here. Disk writes sat at a steady ~60 MB/s across two samples while net RX varied 10.8→17.5 MB/s — a ceiling signature. `/var` is btrfs with `compress=zstd:1` (CPU compression on every write, mostly wasted on already-compressed game data) + CoW; Steam preallocates then writes, so bytes written ≈ 4–5× bytes downloaded. Raw `dd` sequential write/read of the card to be measured in B1 once no download is running.
+
+**Decision (2026-09-06, D-9): internal, Android 16 GiB.** The user's call, not a measurement: they will not use Android, and the SD write ceiling above is the only storage signal that matters to them. Procedure, read from `system_files/usr/libexec/armada/armada-installer`: a fresh install deletes and recreates `userdata` at the chosen size, zeroes its first 8 MiB (Android factory-resets on next boot, system kept), then creates ESP 512 MiB + boot 1 GiB + btrfs root in the freed space (Armada needs at least ~33.6 GiB); it refuses if any partition lies after `userdata` (this unit: `sda17` is last). Floor 8 GiB, GUI default 32 GiB, slider step 4. Reverts: `armada-installer reset` from the SD card, or ABL "UNINSTALL CFW & EXPAND USERDATA". **Not executed at the 2026-09-06 `/end`** — root is still `mmcblk0p3`. Steps: L-7 (run), L-8 (verify + rewrite `docs/DEVICE.md`).
 
 ## B9 — Upstream contributions
 

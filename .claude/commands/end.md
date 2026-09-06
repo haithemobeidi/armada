@@ -28,7 +28,7 @@ This repo has no compiler; the guard is syntax + the repo's own tests, scoped to
 # `git diff upstream/main` would list upstream's own new commits as "our" changes.
 BASE=$(git merge-base HEAD upstream/main)
 git diff --name-only "$BASE" -- '*.py' | xargs -r python -m py_compile
-git diff --name-only "$BASE" -- '*.sh' 'system_files/usr/libexec/armada/*' 'tools/*' | xargs -r -I{} bash -n {}
+git diff --name-only "$BASE" -- '*.sh' 'system_files/usr/libexec/armada/*' 'tools/*.sh' | xargs -r -I{} bash -n {}
 # run the repo test(s) whose subject you touched, if any (tests/*-test.sh are bash + python)
 ```
 
