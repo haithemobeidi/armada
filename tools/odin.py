@@ -47,15 +47,21 @@ def host() -> str:
 
 
 def ssh(cmd: str, check: bool = True, capture: bool = True, stdin: str | None = None) -> str:
+    # Binary pipes on purpose: in text mode Windows turns every "\n" written to stdin
+    # into "\r\n", so `push` was landing CRLF files in the device's /etc (found
+    # 2026-09-06 on the first overlay file; udev tolerated it, sysctl/configparser
+    # would not). Normalise to LF here so a CRLF working copy can't leak either.
+    data = stdin.replace("\r\n", "\n").encode("utf-8") if stdin is not None else None
     proc = subprocess.run(
         ["ssh", *SSH_OPTS, f"{USER}@{host()}", cmd],
-        input=stdin, text=True, encoding="utf-8", errors="replace",
-        capture_output=capture,
+        input=data, capture_output=capture,
     )
+    out = proc.stdout.decode("utf-8", errors="replace") if capture and proc.stdout else ""
+    err = proc.stderr.decode("utf-8", errors="replace") if capture and proc.stderr else ""
     if check and proc.returncode != 0:
-        sys.stderr.write(proc.stderr or "")
+        sys.stderr.write(err)
         raise SystemExit(f"ssh failed ({proc.returncode}): {cmd}")
-    return (proc.stdout or "") if capture else ""
+    return out if capture else ""
 
 
 def sudo(cmd: str, check: bool = True) -> str:
