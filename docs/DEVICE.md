@@ -86,7 +86,7 @@ Factory defaults for the UI-owned files live in the image at `/usr/share/armada/
 ## What is applied on the handheld right now
 
 - **`device-overlay/` version applied:** **v1** — `etc/udev/rules.d/99-armada-hide-internal-ufs.rules`, pushed 2026-09-06 14:48 and reloaded (`udisksctl info -b /dev/sda` → `HintIgnore: true`; SD card not affected). Identical to the repo file.
-- **UI-owned state as last pulled:** `device-state/` (2026-09-06 14:48, after the internal install — byte-identical to the 2026-09-05 pull). Balanced has `gpu_max = 0.80` (set by the user in the Power tab; reduced the whine a bit; the file on the internal install is dated 14:24, i.e. it was set again or restored right after the install), everything else factory; `abl.conf` `auto_update_enabled=1`; `game-tweaks.json` and `input-calibration.json` do not exist yet (nothing set).
+- **UI-owned state as last pulled:** `device-state/` (2026-09-06 14:48, after the internal install — byte-identical to the 2026-09-05 pull). Balanced has `gpu_max = 0.80` (set by the user in the Power tab; reduced the whine a bit. **The fresh internal deployment reset it to factory**; the user set it again by hand at 14:24 on 2026-09-06, before the re-pull — so UI tweaks do not survive an installer run), everything else factory; `abl.conf` `auto_update_enabled=1`; `game-tweaks.json` and `input-calibration.json` do not exist yet (nothing set).
 
 Update this section at every pause that changes the device and at `/end` (Step 1e).
 
