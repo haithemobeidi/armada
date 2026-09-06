@@ -8,7 +8,7 @@
 
 ## 📍 NEXT ACTION
 
-**Rebase `odin3-tuning` onto `upstream/main` (L-9, D-2)** — 14+ commits behind, and the device now runs `20260906.41d2e10`, newer than our fork point. Then **open B1 — Baseline instrumentation:** declare pause-points, write the on-device CSV logger, record one idle and one play session, run the pitch-vs-PWM sweep with the user listening. Confirm with the user that Steam's Storage page no longer lists the internal chip, then close L-12.
+**Rebase `odin3-tuning` onto `upstream/main` (L-9, D-2)** — 14+ commits behind, and the device now runs `20260906.41d2e10`, newer than our fork point. Then **open B1 — Baseline instrumentation:** declare pause-points, write the on-device CSV logger, record one idle and one play session, run the pitch-vs-PWM sweep with the user listening.
 
 **Current block:** B1 — Baseline instrumentation
 
@@ -20,7 +20,7 @@
 
 ## Optional loose ends (NOT the next step)
 
-Open: L-3 (user: AYN warranty check), L-4 (user: off-PC copy of the ABL backup — the device-side copy is gone), L-5 (download-plateau experiment, now on internal storage), L-6 (game froze on a Performance switch mid shader-compile; B3 repro), L-12 (udev hide rule applied — user confirms in Steam, then close). See `docs/SESSION_LEDGER.md`.
+Open: L-3 (user: AYN warranty check), L-4 (user: off-PC copy of the ABL backup — the device-side copy is gone), L-5 (download-plateau experiment, now on internal storage), L-6 (game froze on a Performance switch mid shader-compile; B3 repro). See `docs/SESSION_LEDGER.md`.
 
 ---
 
