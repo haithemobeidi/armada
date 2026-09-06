@@ -11,7 +11,7 @@ Hardware facts, access, sysfs paths, config ownership, backups, and **what is cu
 | RAM / swap | 16 GB (14 963 MiB usable); zram swap 14.6 GB, `vm.swappiness=180` |
 | OS | ArmadaOS `20260904.14230df` from `ghcr.io/armada-os/armada:testing` (bootc, composefs root; rollback deployment `20260903.33e0319`), Fedora 44, kernel `7.2.3`. Updated by the user 2026-09-05. |
 | Hostname | `fedora` (default; avahi runs but `armada.local` does not resolve — backlog item to set a real hostname) |
-| Boot | ROCKNIX ABL flashed (version in `abl/release.env`); Armada boots from the **SD card**; stock Android intact on internal UFS |
+| Boot | ROCKNIX ABL flashed (version in `abl/release.env`); Armada boots from the **SD card** (`root=` `mmcblk0p3`, `boot=` `mmcblk0p2`, re-checked 2026-09-06); stock Android intact on internal UFS. **D-9 (2026-09-06): moving to internal storage with Android at 16 GiB — decided and go given, not yet executed** (L-7). |
 | Wi-Fi | `wlp1s0`, `ath12k_wifi7_pci` (WCN7850 family), 6 GHz ch 165 @ 160 MHz |
 
 ## Access
@@ -67,7 +67,7 @@ No voltage control exists anywhere (kernel, daemon, plugin). "Undervolt" on this
 | `sda` (internal UFS) | 464.5 GB | **Stock Android**, untouched. `sda15` 12 GB, `sda16` 16.5 GB, `sda17` 435.9 GB = `userdata`. |
 | `sdb`, `sdc` | 20 MB each | UFS boot LUNs |
 
-Internal install (ROADMAP B8, DECISIONS D-7): `armada-installer` shrinks `userdata`, **factory-resets Android** (user data wiped, system kept), dual-boots; `armada-installer reset` returns the space. Not done, deliberately.
+Internal install (ROADMAP B8, DECISIONS D-7 / D-9): `armada-installer` shrinks `userdata`, **factory-resets Android** (user data wiped, system kept), dual-boots; `armada-installer reset` returns the space. **Decided 2026-09-06 (D-9): do it, Android 16 GiB — not run yet.** After it runs, rewrite this table (`sda` gains ESP / boot / btrfs root after a 16 GiB `userdata`; `/var` moves off the card) and the Boot row above (L-8). Android's `userdata` also holds the on-device ABL backup copy and the GameNative library — both go; the PC copies count.
 
 ## Config ownership (DECISIONS D-4)
 
