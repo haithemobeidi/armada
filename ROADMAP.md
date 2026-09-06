@@ -92,4 +92,5 @@ Enable Actions on the fork, repoint `ghcr.io/armada-os/armada` refs, confirm whe
 - `armada-powerd`: make `[fan_curve.*]` and `[underclock.*]` defaults device-scoped (`ayn-odin-3.conf`) instead of global — the Phase 4 idea from the first assessment.
 - Investigate why `power_supply/battery/power_now` reports ~67.8 W while current×voltage gives ~4.7 W (unit or scaling bug; matters for B4 logging).
 - Hostname is `fedora`; a device-specific hostname would make mDNS (`odin3.local`) usable instead of hunting IPs.
+- Steam's Storage page lists the internal UFS chip as an empty 464.5 GB drive (Android's filesystem-less partitions confuse it; udisks already says `HintSystem`). A `UDISKS_IGNORE=1` udev rule for `sda` would hide it — first overlay candidate and an upstream PR for every Odin 3 internal install (L-12).
 - `/var` on the SD card mounts with `compress=zstd:1`. Measure whether disabling compression for the Steam library (a `chattr +m` / nodatacow-style per-directory setting, or a mount option) speeds up installs on the SD card — game data is already compressed, so the CPU spent compressing it may be pure overhead. B8 measurement candidate.
