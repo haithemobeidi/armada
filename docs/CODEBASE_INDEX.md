@@ -40,7 +40,8 @@
 
 | File | Purpose |
 |---|---|
-| `device-overlay/README.md` | Layout rules: mirrors `/etc`; only files with no Armada Control writer; every file's header says what it does and how to revert. Empty of real files at v0. |
+| `device-overlay/README.md` | Layout rules: mirrors `/etc`; only files with no Armada Control writer; every file's header says what it does and how to revert. v1 since 2026-09-06. |
+| `device-overlay/etc/udev/rules.d/99-armada-hide-internal-ufs.rules` | udev rule: `UDISKS_IGNORE=1` on every block device under the SoC's UFS host (`KERNELS=="*.ufs"`), so udisks flags the internal chip `HintIgnore` and Steam's Storage page stops listing it as an empty 464.5 GB drive (L-12). Header carries the apply/revert commands. Upstream candidate: matches by parent chain, not drive letter. |
 
 ## device-state/ (UI-owned configs as last pulled — a record, never pushed)
 

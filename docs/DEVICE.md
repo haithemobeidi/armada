@@ -65,7 +65,7 @@ No voltage control exists anywhere (kernel, daemon, plugin). "Undervolt" on this
 | Device | Size | What |
 |---|---|---|
 | `sda` (internal UFS, Micron MT512GAYAZ4U31) | 464.5 GB | **Armada** since 2026-09-06: `sda18` 512 MiB vfat ESP (`ARMADA`) → `/boot/efi`; `sda19` 1 GiB ext4 `boot` → `/boot`; `sda20` **418.4 GB btrfs `root`** → `/sysroot`, `/var` (`subvol=var`), `/var/home` (`subvol=home`), `noatime,compress=zstd:1,discard=async`. Root is composefs. **Android** kept on `sda1`–`sda17`: `sda15` 12 GB, `sda16` 16.5 GB, `sda17` **16 GiB `userdata`** (factory-reset by the install). |
-| `mmcblk0` (SD card, SanDisk Extreme 1 TB) | 953 GB | **Game storage.** Reformatted 2026-09-06 with `/usr/lib/hwsupport/format-sdcard.sh` (what Steam's "Format SD card" button runs): GPT, one partition, ext4 `casefold`, owner 1000:1000, no label. Automounted by `99-steamos-automount.rules` at `/run/media/armada/<fs-uuid>` with the `/run/media/mmcblk0p1` symlink Steam looks for. The old SD-card Armada install is gone. |
+| `mmcblk0` (SD card, SanDisk Extreme 1 TB) | 953 GB | **Game storage.** Reformatted 2026-09-06 with `/usr/lib/hwsupport/format-sdcard.sh` (what Steam's "Format SD card" button runs): GPT, one partition, ext4 `casefold`, owner 1000:1000, no label. The user then formatted it once more from Steam's own Format button, which gave it the label `SD`: automounted by `99-steamos-automount.rules` at `/run/media/armada/SD` with a `/run/media/SD` symlink; Steam lists it. The old SD-card Armada install is gone. |
 | `sdb`, `sdc` | 20 MB each | UFS boot LUNs |
 
 Internal install (ROADMAP B8, DECISIONS D-7 / D-9): **done 2026-09-06 by the user** from the Desktop Mode Armada Installer (Android slider at 16). Result verified over SSH the same day: table above. Automount only picks up **ext4** partitions (`steamos-automount.sh`: "only automount ext4 as that'll Steam will format right now"), which is why the card's old btrfs/vfat Armada partitions never showed in Steam until it was reformatted. To give Android the disk back: `armada-installer reset` (from an SD-card Armada) or ABL "UNINSTALL CFW & EXPAND USERDATA".
@@ -85,8 +85,8 @@ Factory defaults for the UI-owned files live in the image at `/usr/share/armada/
 
 ## What is applied on the handheld right now
 
-- **`device-overlay/` version applied:** none (v0 — nothing pushed yet).
-- **UI-owned state as last pulled:** `device-state/` (2026-09-05 02:45, after the OTA). Balanced has `gpu_max = 0.80` (set by the user in the Power tab; reduced the whine a bit), everything else factory; `abl.conf` `auto_update_enabled=1`; `game-tweaks.json` and `input-calibration.json` do not exist yet (nothing set).
+- **`device-overlay/` version applied:** **v1** — `etc/udev/rules.d/99-armada-hide-internal-ufs.rules`, pushed 2026-09-06 14:48 and reloaded (`udisksctl info -b /dev/sda` → `HintIgnore: true`; SD card not affected). Identical to the repo file.
+- **UI-owned state as last pulled:** `device-state/` (2026-09-06 14:48, after the internal install — byte-identical to the 2026-09-05 pull). Balanced has `gpu_max = 0.80` (set by the user in the Power tab; reduced the whine a bit; the file on the internal install is dated 14:24, i.e. it was set again or restored right after the install), everything else factory; `abl.conf` `auto_update_enabled=1`; `game-tweaks.json` and `input-calibration.json` do not exist yet (nothing set).
 
 Update this section at every pause that changes the device and at `/end` (Step 1e).
 

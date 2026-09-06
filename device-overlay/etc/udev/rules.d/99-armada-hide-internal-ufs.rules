@@ -1,0 +1,22 @@
+# device-overlay: hide the internal UFS from udisks, and so from Steam's Storage page
+#
+# What: marks every block device under the SoC's UFS host controller — the internal
+#   storage: Android's partitions plus, since the internal install, Armada's own —
+#   with UDISKS_IGNORE, which udisks2 exposes as HintIgnore=true on each object so
+#   GUIs (Steam's Storage page, Dolphin) hide it. The objects still exist; nothing
+#   that mounts the internal disk uses udisks (root/boot/ESP come from fstab and
+#   ostree, the installer uses parted/lsblk), and the SD card sits on the mmc host,
+#   so the steamos-automount path is untouched.
+# Why: Android's partitions carry no filesystem Steam knows, so Steam listed the raw
+#   chip as an empty drive ("MT512GAYAZ4U31, 464.5 GB free of 464.5 GB") next to the
+#   SD card, inviting a Format that Armada's format-device.sh would refuse anyway
+#   (2026-09-06, ledger L-12).
+# Match: the parent chain (SUBSYSTEMS/KERNELS), not a drive letter — sd* names are
+#   not stable, and the UFS host is "<addr>.ufs" on every Qualcomm handheld Armada
+#   supports (1d84000.ufs on this SM8750), which is what makes this upstreamable.
+# Block: B8 follow-up (cosmetic). First overlay file (v1).
+# Apply without a reboot (a bare `udevadm trigger --subsystem-match=block` returned 1
+#   and skipped these devices on 2026-09-06; the sysname match worked):
+#   udevadm control --reload-rules && udevadm trigger -c change --subsystem-match=block --sysname-match='sd*'
+# Revert: delete this file, then run the same two commands.
+SUBSYSTEM=="block", SUBSYSTEMS=="platform", KERNELS=="*.ufs", ENV{UDISKS_IGNORE}="1"
