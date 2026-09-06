@@ -9,9 +9,9 @@ Hardware facts, access, sysfs paths, config ownership, backups, and **what is cu
 | Device | AYN Odin 3 (`ARMADA_DEVICE_ID=ayn-odin-3`, `ARMADA_SOC_CLASS=SM8750`) |
 | SoC | Snapdragon 8 Elite, SM8750, 3 nm. 8 cores: 6× Phoenix M + 2× Phoenix L (Oryon). Adreno 830. |
 | RAM / swap | 16 GB (14 963 MiB usable); zram swap 14.6 GB, `vm.swappiness=180` |
-| OS | ArmadaOS `20260904.14230df` from `ghcr.io/armada-os/armada:testing` (bootc, composefs root; rollback deployment `20260903.33e0319`), Fedora 44, kernel `7.2.3`. Updated by the user 2026-09-05. |
+| OS | ArmadaOS **`20260906.41d2e10`** from `ghcr.io/armada-os/armada:testing` (bootc, composefs root), Fedora 44, kernel `7.2.3`. Observed 2026-09-06 on the fresh internal deployment (the SD install had been `20260904.14230df`). |
 | Hostname | `fedora` (default; avahi runs but `armada.local` does not resolve — backlog item to set a real hostname) |
-| Boot | ROCKNIX ABL flashed (version in `abl/release.env`); Armada boots from the **SD card** (`root=` `mmcblk0p3`, `boot=` `mmcblk0p2`, re-checked 2026-09-06); stock Android intact on internal UFS. **D-9 (2026-09-06): moving to internal storage with Android at 16 GiB — decided and go given, not yet executed** (L-7). |
+| Boot | ROCKNIX ABL flashed (version in `abl/release.env`), boot source **Internal**. Armada boots from **internal UFS** since 2026-09-06 (D-9; `root=` `sda20`, `boot=` `sda19`, ESP `sda18`, verified over SSH). Android kept, factory-reset, in a 16 GiB `userdata` (`sda17`); reachable by toggling the ABL boot source. |
 | Wi-Fi | `wlp1s0`, `ath12k_wifi7_pci` (WCN7850 family), 6 GHz ch 165 @ 160 MHz |
 
 ## Access
@@ -19,6 +19,7 @@ Hardware facts, access, sysfs paths, config ownership, backups, and **what is cu
 - **SSH:** `ssh armada@192.168.1.188` — key auth from this PC (`~/.ssh/id_ed25519.pub` installed in `/var/home/armada/.ssh/authorized_keys`). `tools/odin.py` wraps it.
 - **Password** (image default, every Armada install): user `armada`, password `armada`. `sudo` needs it (only a few `systemctl`/session commands are NOPASSWD).
 - **Toggle:** Armada Control → Settings → System → **Enable SSH** (runs `systemctl enable --now sshd`). Turn it off if the device leaves the home network.
+- **After any fresh deployment** (the internal install is one: `ostree admin deploy --no-merge`, and `/var` is new) SSH is off again and the key is gone: the user re-enables SSH in the UI, then the key goes back with paramiko + the image's default password (`ssh-keygen -R <ip>` first — new host keys). Done 2026-09-06; the IP stayed `192.168.1.188`.
 - **IP is DHCP and has moved before** (was `.186`). Find it in Steam → Settings → Internet, or `arp -a` for the Atheros OUI `00-03-7f`, or scan the LAN for port 22.
 - **ADB is Android-only.** Nothing on the Armada side speaks it.
 - **No terminal for the user.** Claude does the SSH work; the user observes.
@@ -63,11 +64,11 @@ No voltage control exists anywhere (kernel, daemon, plugin). "Undervolt" on this
 
 | Device | Size | What |
 |---|---|---|
-| `mmcblk0` (SD card) | 953 GB | **Armada.** `p3` btrfs → `/sysroot` and `/var` (28 GB used). Root is composefs. |
-| `sda` (internal UFS) | 464.5 GB | **Stock Android**, untouched. `sda15` 12 GB, `sda16` 16.5 GB, `sda17` 435.9 GB = `userdata`. |
+| `sda` (internal UFS, Micron MT512GAYAZ4U31) | 464.5 GB | **Armada** since 2026-09-06: `sda18` 512 MiB vfat ESP (`ARMADA`) → `/boot/efi`; `sda19` 1 GiB ext4 `boot` → `/boot`; `sda20` **418.4 GB btrfs `root`** → `/sysroot`, `/var` (`subvol=var`), `/var/home` (`subvol=home`), `noatime,compress=zstd:1,discard=async`. Root is composefs. **Android** kept on `sda1`–`sda17`: `sda15` 12 GB, `sda16` 16.5 GB, `sda17` **16 GiB `userdata`** (factory-reset by the install). |
+| `mmcblk0` (SD card, SanDisk Extreme 1 TB) | 953 GB | **Game storage.** Reformatted 2026-09-06 with `/usr/lib/hwsupport/format-sdcard.sh` (what Steam's "Format SD card" button runs): GPT, one partition, ext4 `casefold`, owner 1000:1000, no label. Automounted by `99-steamos-automount.rules` at `/run/media/armada/<fs-uuid>` with the `/run/media/mmcblk0p1` symlink Steam looks for. The old SD-card Armada install is gone. |
 | `sdb`, `sdc` | 20 MB each | UFS boot LUNs |
 
-Internal install (ROADMAP B8, DECISIONS D-7 / D-9): `armada-installer` shrinks `userdata`, **factory-resets Android** (user data wiped, system kept), dual-boots; `armada-installer reset` returns the space. **Decided 2026-09-06 (D-9): do it, Android 16 GiB — not run yet.** After it runs, rewrite this table (`sda` gains ESP / boot / btrfs root after a 16 GiB `userdata`; `/var` moves off the card) and the Boot row above (L-8). Android's `userdata` also holds the on-device ABL backup copy and the GameNative library — both go; the PC copies count.
+Internal install (ROADMAP B8, DECISIONS D-7 / D-9): **done 2026-09-06 by the user** from the Desktop Mode Armada Installer (Android slider at 16). Result verified over SSH the same day: table above. Automount only picks up **ext4** partitions (`steamos-automount.sh`: "only automount ext4 as that'll Steam will format right now"), which is why the card's old btrfs/vfat Armada partitions never showed in Steam until it was reformatted. To give Android the disk back: `armada-installer reset` (from an SD-card Armada) or ABL "UNINSTALL CFW & EXPAND USERDATA".
 
 ## Config ownership (DECISIONS D-4)
 
@@ -91,12 +92,12 @@ Update this section at every pause that changes the device and at `/end` (Step 1
 
 ## Backups and recovery
 
-- **Stock ABL** (bootloader) backup, both slots identical, SHA256 `1e732436098279c82637460b1680e05e80072b2d93a56003935e928d4f9068fd`, 1 MiB each, 236 136 non-zero bytes (real data): `C:\Users\haith\Downloads\odin3-abl-backup\` (`abl_a.img`, `abl_b.img`, `restore_backup_abl.sh`). A device copy sits at `/sdcard/rocknix_abl/SM8750/` **on Android's internal storage — an internal install would wipe it**; the PC copy is the one that counts (consider a cloud copy).
+- **Stock ABL** (bootloader) backup, both slots identical, SHA256 `1e732436098279c82637460b1680e05e80072b2d93a56003935e928d4f9068fd`, 1 MiB each, 236 136 non-zero bytes (real data): `C:\Users\haith\Downloads\odin3-abl-backup\` (`abl_a.img`, `abl_b.img`, `restore_backup_abl.sh`). The device copy that sat at `/sdcard/rocknix_abl/SM8750/` on Android **was wiped by the 2026-09-06 internal install**; the PC copy is the only one (L-4: put a second copy off this PC).
 - **Flashed ABL:** `abl_signed-SM8750.elf` from the ROCKNIX ABL release pinned in `abl/release.env`; integrity was checked against its `.sha256`.
-- **SD image:** `armada-20260817.img.gz` (SHA256 `586d21c2…19c6d`, matched the published hash), written with `C:\Users\haith\Downloads\flash-armada.ps1`, read back and verified byte-for-byte. The script matches the target disk on serial AND size AND USB bus AND non-system, and aborts unless exactly one disk matches — the card reader reports the same serial for every slot.
-- **Recovery ladder:** (1) delete the offending `/etc` file over SSH, restart the daemon; (2) bootc rolls back to the previous deployment (`91armada-ostree-fallback` dracut module); (3) pull the SD card → device boots Android from internal; (4) ABL "UNINSTALL CFW" / restore the stock ABL from the backup.
+- **SD image:** `armada-20260817.img.gz` (SHA256 `586d21c2…19c6d`, matched the published hash), written with `C:\Users\haith\Downloads\flash-armada.ps1`, read back and verified byte-for-byte. The script matches the target disk on serial AND size AND USB bus AND non-system, and aborts unless exactly one disk matches — the card reader reports the same serial for every slot. **The SD card no longer carries this install** (reformatted as game storage 2026-09-06); a rescue Armada means re-flashing a card with the script.
+- **Recovery ladder (internal install, from 2026-09-06):** (1) delete the offending `/etc` file over SSH, restart the daemon; (2) bootc rolls back to the previous deployment (`91armada-ostree-fallback` dracut module); (3) ABL (VOL- at power-on) → switch boot source to SD card with a freshly flashed Armada card, or boot mode → Android; (4) ABL "UNINSTALL CFW & EXPAND USERDATA" / restore the stock ABL from the PC backup. "Pull the card" is no longer a recovery step.
 
-## Gotchas learned the hard way (Android-side, from the ABL flashing session)
+## Gotchas learned the hard way (Android-side, from the ABL flashing session — historical; Android was factory-reset 2026-09-06)
 
 - On Android, `/sdcard` is **internal** storage; the physical card was `/storage/F0EE-C523`.
 - Internal storage is FUSE and cannot hold the execute bit, so the on-device root-script tool showed the internal folder as empty — run scripts from the SD-card copy (byte-identical, absolute paths inside).
