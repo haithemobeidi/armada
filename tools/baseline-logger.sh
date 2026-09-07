@@ -6,7 +6,9 @@
 # One row per interval: what the fan daemon sees (its own D-Bus Temperature /
 # FanPwm), the raw fan PWM, the three hottest counted thermal zones (same zone
 # set and same top-3 average as armada-powerd), CPU/GPU clocks, battery I/V/W,
-# USB power presence, load, and the running Steam appid. It never writes to
+# USB power presence, the fuel gauge's charge counter (uAh: the drain truth that
+# depends on neither the % gauge nor the current sensor), load, and the running
+# Steam appid. It never writes to
 # sysfs. Stop it with: kill "$(cat OUT.csv.pid)". Pull the CSV with
 # `tools/odin.py get`. Why a script and not a systemd unit: nothing to install,
 # nothing to revert, and it dies with the session if forgotten.
@@ -51,7 +53,7 @@ printf '%s\n' "$$" >"$out.pid"
 {
     printf '# baseline-logger start=%s host=%s interval=%ss duration=%ss zones=%s pwm=%s\n' \
         "$(date --iso-8601=seconds)" "$(hostname)" "$interval" "$duration" "${#zone_files[@]}" "${pwm_file:-none}"
-    printf 'ts,t,profile,temp_d,pwm_d,pwm_hw,z_top3_avg,z_max,z_max_name,cpu0_mhz,cpu6_mhz,gpu_mhz,bat_status,bat_pct,bat_ua,bat_uv,bat_w,usb_online,load1,appid\n'
+    printf 'ts,t,profile,temp_d,pwm_d,pwm_hw,z_top3_avg,z_max,z_max_name,cpu0_mhz,cpu6_mhz,gpu_mhz,bat_status,bat_pct,bat_ua,bat_uv,bat_w,bat_uah,usb_online,load1,appid\n'
 } >>"$out"
 
 start=$(date +%s)
@@ -90,17 +92,18 @@ while :; do
     bat_pct=$(read_or "$bat/capacity" "")
     bat_ua=$(read_or "$bat/current_now" 0)
     bat_uv=$(read_or "$bat/voltage_now" 0)
+    bat_uah=$(read_or "$bat/charge_counter" "")
     usb_online=$(read_or "$usb/online" "")
     load1=$(cut -d' ' -f1 /proc/loadavg)
     appid=$(sed -n 's/.*"appid": *"\{0,1\}\([0-9]*\)"\{0,1\}.*/\1/p' "$perf_state" 2>/dev/null | head -n1)
 
-    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
         "$(date +%H:%M:%S)" "$now" "$profile" "$temp_d" "$pwm_d" "$(read_or "$pwm_file" "")" \
         "$z_top3_avg" "$z_max" "$z_max_name" \
         "$(( cpu0 / 1000 ))" "$(( cpu6 / 1000 ))" "$(( gpu_hz / 1000000 ))" \
         "$bat_status" "$bat_pct" "$bat_ua" "$bat_uv" \
         "$(awk -v i="$bat_ua" -v v="$bat_uv" 'BEGIN { printf "%.2f", i * v / 1e12 }')" \
-        "$usb_online" "$load1" "$appid" >>"$out"
+        "$bat_uah" "$usb_online" "$load1" "$appid" >>"$out"
 
     sleep "$interval"
 done
