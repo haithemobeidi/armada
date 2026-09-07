@@ -90,6 +90,8 @@ Factory defaults for the UI-owned files live in the image at `/usr/share/armada/
 - **`device-overlay/` version applied:** **v1** — `etc/udev/rules.d/99-armada-hide-internal-ufs.rules`, pushed 2026-09-06 14:48 and reloaded (`udisksctl info -b /dev/sda` → `HintIgnore: true`; SD card not affected). Identical to the repo file.
 - **UI-owned state as last pulled:** `device-state/` (2026-09-06 14:48, after the internal install — byte-identical to the 2026-09-05 pull). Balanced has `gpu_max = 0.80` (set by the user in the Power tab; seemed to reduce the whine a bit — **but it is a no-op: 0.80 × the 1100 MHz table top = 880 → clamps to 832 = uncapped; see `docs/ARMADA_CONTROL.md` → GPU Max, L-16**. **The fresh internal deployment reset it to factory**; the user set it again by hand at 14:24 on 2026-09-06, before the re-pull — so UI tweaks do not survive an installer run), everything else factory; `abl.conf` `auto_update_enabled=1`; `game-tweaks.json` and `input-calibration.json` do not exist yet (nothing set).
 
+- **Outside `/etc`, harmless, not an overlay:** `/var/tmp/armada-baseline/` holds the B1 logger (`baseline-logger.sh`, = repo `tools/baseline-logger.sh` v2), the one-off `wait-balanced.sh`, and the two run CSVs (also pulled to `device-data/`). Nothing running there after 2026-09-07 03:23. Cleanup if ever wanted: `rm -rf /var/tmp/armada-baseline`.
+
 Update this section at every pause that changes the device and at `/end` (Step 1e).
 
 ## Backups and recovery
