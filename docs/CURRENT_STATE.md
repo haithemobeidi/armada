@@ -8,13 +8,13 @@
 
 ## 📍 NEXT ACTION
 
-**Rebase `odin3-tuning` onto `upstream/main` (L-9, D-2)** — 14+ commits behind, and the device now runs `20260906.41d2e10`, newer than our fork point. Then **open B1 — Baseline instrumentation:** declare pause-points, write the on-device CSV logger, record one idle and one play session, run the pitch-vs-PWM sweep with the user listening.
+**Open B1 — Baseline instrumentation:** declare pause-points, write the on-device CSV logger (temp / PWM / CPU+GPU freq / **battery W** — the owner's target is battery first, see the ROADMAP intro), record one idle and one play session, run the pitch-vs-PWM sweep with the user listening. (L-9 rebase done 2026-09-07: fork point `04dbfc9`, no conflicts.)
 
 **Current block:** B1 — Baseline instrumentation
 
 **Build status:** working (hooks verified in a fresh session; `tools/odin.py` used all session; `/end` build-guard glob fixed so `bash -n` no longer runs on `tools/*.py`; overlay v1 pushed and applied)
 
-**Remote:** `origin/odin3-tuning` = HEAD after the follow-up commit. `main` = `origin/main` = `14230df`; `upstream/main` is 14+ commits ahead (L-9). Device image: `20260906.41d2e10`.
+**Remote:** `origin/odin3-tuning` = HEAD after the 2026-09-07 rebase push (`--force-with-lease`, D-2). Fork point = `upstream/main` = `04dbfc9` (0 behind). `main` = `origin/main` = `14230df` (mirror, untouched). Device image: `20260906.41d2e10` (= upstream `41d2e10`, one commit behind the fork point — a decky fix). **Other machine:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
 
 ---
 
