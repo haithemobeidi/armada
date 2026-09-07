@@ -40,8 +40,27 @@ A read-only logger on the device (systemd user unit or a script launched over SS
 
 **Run 1 — 2026-09-07 02:13–02:43 device time, play, Eco, unplugged, FINAL FANTASY RESONANCE DEMO (in-game frame cap, value to confirm), device already warm from earlier play:** 591 rows / 29.9 min. Battery 98 → 92 % (12.0 %/h by the gauge) but `current_now × voltage_now` averaged **6.6 W** (median 7.1, p10 4.0, p90 8.3) — the two disagree by ~1.6×; the gauge's own `time_to_empty_avg` sides with the current sensor (≈ 4.3 h at 92 %). Logger v2 records `charge_counter` to settle it. Daemon temperature mean 61.7 °C, max 69 (a `gpuss` zone was the hottest 89 % of the time); **fan PWM 51 (the floor) 78 % of the time, 56 the rest — the fan never left the floor on Eco.** GPU at 832 MHz 78 % of the time (Eco's `gpu_max 0.80` is a no-op, L-16); policy6 pinned at its 1958 MHz Eco cap 99 % of the time, policy0 at its 1785 cap 74 % — **this game is CPU-capped on Eco.** Load1 mean 5.3. Raw CSV: `device-data/play-ffresonance-eco-20260907-021340.csv` (git-ignored).
 
-**Run 2 — 2026-09-07 03:07:49 device time, same game / same in-game cap / unplugged, Balanced (in progress):** started by a watcher 15 s after the daemon reported Balanced (03:07:34). **User report at ~03:08, phone dB meter held near the device (rough):** Eco read ~30–35 dB, Balanced ~40 dB — "another 10 dB-ish". At that moment: daemon temperature 61–63 °C, **PWM 64 on Balanced vs 51 (the floor) on Eco at the same temperature** — the difference is the curve (`moderate` vs `relaxed`), not the heat. Battery 85 %, ~6.4–7.2 W, prime cores now alternating 1017 ↔ 2246 MHz (no longer pinned at the cap as on Eco).
+**Run 2 — 2026-09-07 03:07:49–03:23:38 device time, same game / same in-game cap (value never confirmed) / unplugged, Balanced — 15.8 min, stopped early by the user (tired):** started by a watcher 15 s after the daemon reported Balanced (03:07:34). **User report at ~03:08, phone dB meter held near the device (rough):** Eco read ~30–35 dB, Balanced ~40 dB — "another 10 dB-ish". At that moment: daemon temperature 61–63 °C, **PWM 64 on Balanced vs 51 (the floor) on Eco at the same temperature** — the difference is the curve (`moderate` vs `relaxed`), not the heat. Battery 85 %, ~6.4–7.2 W, prime cores now alternating 1017 ↔ 2246 MHz (no longer pinned at the cap as on Eco).
 **User report at 03:18: "it's pretty loud rn"** — at that moment PWM **64**, daemon temperature 61 °C, GPU 832 MHz, ~7–8 W, and 64 was the run's maximum so far (histogram after 10.5 min: 51×24, 56×75, 58×8, 64×105). So on this unit **PWM 64 — 25 % duty, the second-lowest level the moderate curve ever uses — already reads as "pretty loud" to the owner**, and the character is a high-pitched tone, not whoosh (user, 03:12). Anchor for the B2 target: the play-time band is 51–64; the sweep must say whether the tone is worse, same or gone above it.
+**User report at 03:19: "it's intense rn"** — PWM hunting **56 ↔ 64 every 6–12 s** at a steady 61–63 °C (the daemon's EMA + ramp + 8-step quantisation straddling the curve point), GPU 832, 7–10 W. B2 lead: a fan that flips between two quantised steps every few seconds may read as more intrusive than a steady tone at either step — `smoothing` / `ramp_down` / `pwm_quantum` are exactly the knobs for that, one at a time.
+**User report at 03:21: "once the fan ramps up it stays up / not ramping down when the scene chills"** — checked against the code and the CSV: no hysteresis in `fan_tick` (EMA 0.5 → half-life one 3 s tick; `ramp_down=6`/tick → 64→51 in ≤ 9 s); in the run every temperature dip below 58 °C had the fan back at 51 within 3–6 s. **What stays up is the temperature**, not the fan: the GPU sat at 832 MHz 92 % of the run regardless of scene (one 53 °C dip at 03:19:56 with GPU 660 — a menu — was back at 61 °C 12 s later). Not a bug. B3 lead: with the in-game cap above what the game can hold, the GPU runs flat out in calm scenes too; a reachable cap is the only lever that lowers play-time temperature and therefore the fan.
+
+**Eco vs Balanced, same game, unplugged (run 1 29.9 min / run 2 15.8 min):**
+
+| | Eco | Balanced |
+|---|---|---|
+| Draw, mean (current × voltage) | 6.6 W | 7.0 W |
+| Draw, p10–p90 | 4.0–8.2 W | 5.8–8.3 W |
+| Coulomb counter (logger v2, run 2 only) | — | 408 mAh in 15.8 min = 1.55 A ≈ **5.3 h** from 8.16 Ah; the current sensor read 1.73 A over the same window — the two agree within 10 %, the % gauge was the odd one out at the top of the curve (98→92 read 12 %/h; 85→80 read 19 %/h ≈ 5.3 h — consistent once below ~90 %) |
+| Daemon temperature, mean / max | 61.8 / 69 °C | 60.4 / 64 °C |
+| Fan PWM: at 51 / 56 / ≥ 64 | 79 % / 21 % / 0 % (max 56) | 8 % / 39 % / 48 % (max 64) |
+| GPU at 832 MHz | 81 % | 92 % |
+| Prime cores at their cap | 99 % (1958 MHz) | 44 % (2246 MHz) |
+| Policy0 at its cap | 76 % (1785 MHz) | 96 % (2227 MHz) |
+| Load1, mean | 5.3 | 5.5 |
+| Owner's ear | ~30–35 dB, tolerable | ~40 dB, "pretty loud", high-pitched, 56 ↔ 64 hunting |
+
+Reading: **Balanced costs ~6 % more power for a CPU that is no longer starved** (prime cores at cap 44 % vs 99 %) and runs a degree cooler — but the moderate curve puts the fan on 64 half the time, and 64 is already "pretty loud" on this unit. Both profiles ≈ 5 h of this game. The battery win is not in the profile choice at this load; it is in the GPU, which never leaves 832 MHz on either (B3: reachable frame cap; real `gpu_max`, L-16). The noise win is in the curve, not the heat (B2: same 61–63 °C gave 51 on Eco and 64 on Balanced). Raw CSV: `device-data/play-ffresonance-balanced-20260907-030749.csv`.
 
 ## B2 — Fan + thermal
 
