@@ -34,7 +34,8 @@
 
 | File | Purpose |
 |---|---|
-| `tools/odin.py` | The one door to the device over OpenSSH: `status`, `run`, `sudo`, `probe` (→ `device-data/`), `pull` (UI-owned configs → `device-state/`), `push` (`device-overlay/etc/**` → `/etc`, dry-run unless `--yes`, restarts `armada-powerd`). |
+| `tools/odin.py` | The one door to the device over OpenSSH: `status`, `run`, `sudo`, `probe` (→ `device-data/`), `pull` (UI-owned configs → `device-state/`), `push` (`device-overlay/etc/**` → `/etc`, dry-run unless `--yes`, restarts `armada-powerd`), `put` (one file → device, LF-normalised, `+x` for scripts), `get` (one file → `device-data/`). Console forced to UTF-8 (a game title crashed `run` on cp1252, 2026-09-07); `put`/`get` refuse a non-POSIX remote path because Git Bash rewrites `/var/...` into `C:/Program Files/Git/var/...` unless `MSYS_NO_PATHCONV=1`. |
+| `tools/baseline-logger.sh` | B1's read-only CSV logger, run **on the device** (`put` it to `/var/tmp/armada-baseline/`, `get` the CSV). One row per 3 s: the daemon's own D-Bus `Temperature`/`FanPwm`/`Profile`, raw `pwm1` (fan found by hwmon name), top-3 average and max of the counted thermal zones (same zone set and average as `armada-powerd`), CPU policy0/policy6 and GPU MHz, battery status/%/µA/µV/W, USB `online`, load, Steam appid. Never writes sysfs; `OUT.csv.pid` holds the PID for `kill`. |
 
 ## device-overlay/ (repo-owned, pushed to the device)
 

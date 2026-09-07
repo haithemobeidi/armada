@@ -48,15 +48,16 @@ No voltage control exists anywhere (kernel, daemon, plugin). "Undervolt" on this
 
 ## Thermal and fan
 
-- **55 thermal zones.** `armada-powerd` and the Fans tab use zones whose type starts with `cpu`, `gpu`, `gpuss`, `video`, `mem` — that is 12 `cpu-*`, 4 `cpuss-*`, 8 `gpuss*`, 1 `video`. (`ddr-thermal` is **not** counted.) The fan temperature is the **average of the three hottest** of those. `read_temp_max` (suspend path) uses the single hottest.
+- **55 thermal zones.** `armada-powerd` and the Fans tab use zones whose type starts with `cpu`, `gpu`, `gpuss`, `video`, `mem` — that is **16** `cpu-*` (`cpu-0-0-0` … `cpu-0-5-1` plus `cpu-1-0-0`, `cpu-1-0-1`, `cpu-1-1-0`, `cpu-1-1-1`), 4 `cpuss-*`, 8 `gpuss*`, 1 `video` = **29 counted zones** (corrected 2026-09-07 from the B1 logger; an earlier note said 12 `cpu-*`). Not counted: `aoss*`, `modem*`, `camera*`, `nsphvx*`, `nsphmx*`, `ddr-thermal`, the PMIC zones, `battery`. The fan temperature is the **average of the three hottest** of those. `read_temp_max` (suspend path) uses the single hottest.
 - Cooling devices: `cpufreq-cpu0`, `cpufreq-cpu6`, `devfreq-3d00000.gpu`, `pwm-fan`, `ath12k_thermal`.
-- **Fan:** `hwmon54`, name `pwmfan`, files `pwm1`, `pwm1_enable`. **There is no `fan1_input` — the fan has no tachometer.** RPM can never be read; every fan fact is a PWM fact. `FanRpm` on D-Bus is always 0.
+- **Fan:** the hwmon whose `name` is `pwmfan` — `hwmon54` on the SD install, **`hwmon57` on the internal install** (the index moves between deployments; `hwmon54` is now the battery). Always find it by name. Files `pwm1`, `pwm1_enable`. **There is no `fan1_input` — the fan has no tachometer.** RPM can never be read; every fan fact is a PWM fact. `FanRpm` on D-Bus is always 0.
 - Daemon loop (`system_files/usr/libexec/armada/armada-powerd`): tick 3 s → temp → EMA `smoothing=0.5` → curve interpolation → slew (`ramp_up=36`, `ramp_down=6`) → clamp `[min_pwm, max_pwm]` → quantise to `pwm_quantum=8` → write `pwm1`. Factory `min_pwm=51`. Fan-stop (PWM 0) is supported by the Fans tab: saving any curve whose lowest point is 0 forces `min_pwm=0`.
 - Observed 2026-09-05, plugged in, Steam home screen, Balanced: cpu zones 58–61 °C, gpuss 57–60, fan `pwm1=56`, daemon `temperature=61`. Load average 3.7–5.5 (see ROADMAP B5).
 
 ## Power and battery
 
-- `power_supply/battery`: `status`, `current_now` (µA), `voltage_now` (µV), `power_now` (reported ~67.8 W while I×V ≈ 4.7 W — **unit/scaling suspect, don't trust until checked**), `capacity`. `upower` shows no energy counters (0 Wh), rate 4.9 W while charging at 97%.
+- `power_supply/battery`: `status`, `current_now` (µA), `voltage_now` (µV), `power_now` (reported ~67.8 W while I×V ≈ 4.7 W — **unit/scaling suspect, don't trust until checked**), `capacity`. `upower` shows no energy counters (0 Wh), rate 4.9 W while charging at 97%. Also present (seen 2026-09-07): **`charge_control_start_threshold` / `charge_control_end_threshold`** (the 80 % charge-limit knob, L-15 — untested), `charge_counter`, `charge_full`, `time_to_empty_avg`, `cycle_count`, `state_of_health`, `internal_resistance`.
+- **Is a charger connected?** `qcom-battmgr-usb/online` (and `ucsi-source-…/online`) is `1` with VBUS present, `0` without. On 2026-09-07 both read `0` and `battery/status` said `Discharging` at 99 % while the user believed the device was on the charger — read this before trusting any "plugged in" claim. Sign convention: `current_now` is **negative while discharging** (≈ −1.8 to −2.6 A in a game on Eco, ≈ 7.5–10 W).
 - Also present: `qcom-battmgr-usb`, `qcom-battmgr-wls` (wireless), `ucsi-source-psy-pmic_glink.ucsi.01` (USB-C PD source: 3 A).
 - Sleep: `/sys/power/mem_sleep` = `[s2idle] deep`. Armada's sleep modes: `s2idle` ("Native", default since upstream 2026-09-03) or `fake`.
 
