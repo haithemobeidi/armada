@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-09-06 (session 2 `/end` + follow-up — B0 and B8 closed; device now on internal storage)
+**Last updated:** 2026-09-07 (session 3 `/end` — B1 opened; rebase done; two play runs recorded)
 
 > This file carries only the **NEXT ACTION** + this-session deltas. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,44 +8,46 @@
 
 ## 📍 NEXT ACTION
 
-**Open B1 — Baseline instrumentation:** declare pause-points, write the on-device CSV logger (temp / PWM / CPU+GPU freq / **battery W** — the owner's target is battery first, see the ROADMAP intro), record one idle and one play session, run the pitch-vs-PWM sweep with the user listening. (L-9 rebase done 2026-09-07: fork point `04dbfc9`, no conflicts.)
+**Finish B1:** (a) the **30-min idle recording** — Steam home screen, unplugged, screen on; `tools/baseline-logger.sh` is already on the device at `/var/tmp/armada-baseline/` (start it with `odin.py run`, pull with `odin.py get`); (b) the **pitch-vs-PWM sweep** with the user listening — declare pause-points first, daemon paused, temperature watchdog, PWM 0 → 255 in steps of 8, the user calls pitch/loudness per step (this is the test that splits physical from curve; see ROADMAP B1 run 2 notes); then write the B1 summary and close the block. Ask the user for the **in-game frame cap value** used in runs 1–2 (never confirmed).
 
 **Current block:** B1 — Baseline instrumentation
 
-**Build status:** working (hooks verified in a fresh session; `tools/odin.py` used all session; `/end` build-guard glob fixed so `bash -n` no longer runs on `tools/*.py`; overlay v1 pushed and applied)
+**Build status:** working (`tools/odin.py` gained `put`/`get`, UTF-8 console, POSIX remote-path guard; `tools/baseline-logger.sh` v2 shellcheck-clean and smoke-tested on the device; `/end` guards all passed)
 
-**Remote:** `origin/odin3-tuning` = HEAD after the 2026-09-07 rebase push (`--force-with-lease`, D-2). Fork point = `upstream/main` = `04dbfc9` (0 behind). `main` = `origin/main` = `14230df` (mirror, untouched). Device image: `20260906.41d2e10` (= upstream `41d2e10`, one commit behind the fork point — a decky fix). **Other machine:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
+**Remote:** `origin/odin3-tuning` = HEAD after this `/end` push. Fork point = `upstream/main` = `04dbfc9` at the 2026-09-07 rebase (L-9; the hook reports fresh drift at start). `main` = `origin/main` = `14230df` (mirror, untouched). Device image `20260906.41d2e10`. **Other machine after the rebase:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
 
 ---
 
 ## Optional loose ends (NOT the next step)
 
-Open: L-3 (user: AYN warranty check), L-4 (user: off-PC copy of the ABL backup — the device-side copy is gone), L-5 (download-plateau experiment, now on internal storage), L-6 (game froze on a Performance switch mid shader-compile; B3 repro). See `docs/SESSION_LEDGER.md`.
+Open: L-3 (user: AYN warranty check), L-4 (user: off-PC ABL backup copy), L-5 (download-plateau experiment), L-6 (Performance-switch freeze repro, B3), L-13 (B4 sleep checks: Bluetooth across s2idle, `qcom_stats`, left-side warmth), L-15 (B4: `charge_control_*_threshold` reads 70/80 but is not enforced), L-16 (B3: `gpu_max` ratio is against 1100 MHz, so 0.80 is a no-op; B9 issue/PR). See `docs/SESSION_LEDGER.md`.
 
 ---
 
 ## What happened this session
 
-- **B0 closed:** the SessionStart hook did its job in this fresh session (L-2).
-- **Android-side detour (not Armada):** GameNative 1.2.0's ZENONIA 1 save was not exporting or reaching Steam Cloud. Root cause: the game's Sep-3 hotfix (v1.0.1) added Steam Cloud rules and a per-SteamID save folder; the launch-day build saved one folder up, so GameNative (which only looks where Steam's rules point) found nothing. Fix: updated the game in GameNative, it migrated the save, then "Keep local" on the launch-time conflict uploaded it. Verified by the user on the desktop. Reach-the-device notes are in Claude's memory, not this repo; the general lessons went to the KB.
-- **Storage decision (D-9) — and executed:** internal install, Android kept at 16 GiB. The user ran the GUI installer right after the `/end`. Follow-up verified `root=sda20` / `boot=sda19` / ESP `sda18`, Android `userdata` `sda17` 16 GiB, image `20260906.41d2e10`; re-enabled SSH and reinstalled the key (fresh deployment drops both); reformatted the SD card as ext4 game storage with Armada's own `format-sdcard.sh` because the automount only mounts ext4 and the old Armada partitions never showed in Steam. `docs/DEVICE.md` Storage / Boot / recovery ladder rewritten; **B8 closed**.
-- Protocol: `/end` build guard's `bash -n` glob narrowed to `tools/*.sh` (it was choking on `tools/odin.py`).
+- **Survey before starting:** upstream's 111 open issues read. Sleep history (Odin 3 #13 → s2idle default #365; still open: #264 Bluetooth drain — the rfkill fix exists only in the fake-suspend path and is commented out there; #265 warmth; #274 SM8550 never reaches deep sleep) and the gamescope frame-limiter undershoot (#45/#276/#322) recorded in ROADMAP B3/B4 and the ledger (L-13, L-14).
+- **Owner's target stated and recorded** (ROADMAP intro + memory): battery first; 60 fps light / 30 fps modern (FF7 Crisis Core); 2–3 retuned profiles. B3/B4 gates reworded (L-14).
+- **Rebase done (L-9, D-2):** `14230df → 04dbfc9`, 14 commits replayed, no conflicts, delta = 28 added files; pushed `--force-with-lease`.
+- **B1 opened:** `tools/baseline-logger.sh` (read-only, one CSV row / 3 s, fan by hwmon name, 29 counted zones, coulomb counter) written, pushed, smoke-tested. `tools/odin.py`: `put`/`get`, UTF-8 console (a game title crashed `run`), POSIX-path guard (Git Bash rewrote `/var/tmp` into `C:/Program Files/Git/var/tmp` and the first `put` made a junk `~/C:` tree on the device — removed the same minute).
+- **Run 1 (Eco, 30 min) and run 2 (Balanced, 16 min, stopped by the user), FINAL FANTASY RESONANCE DEMO, unplugged, in-game cap:** both ≈ 5 h of play per charge (coulomb counter and current sensor agree within 10 %; the % gauge is compressed above ~90 %). Balanced: +6 % power, prime cores unstarved (44 % at cap vs 99 %), a degree cooler, but the moderate curve sits on PWM 64 half the time and **64 is already "pretty loud" (high-pitched) to the owner**; Eco's relaxed curve held 51 at the same 61–63 °C. GPU pinned at 832 MHz > 80 % of the time on both. Full tables in ROADMAP B1.
+- **Findings:** (1) `gpu_max` is a ratio of the 1100 MHz devfreq top, not the 832 MHz cap → the user's Balanced 0.80 and Eco's factory 0.80 are no-ops; 0.60 = 660 MHz (L-16; `docs/ARMADA_CONTROL.md` corrected). (2) Fan PWM carrier is 25.4 kHz (inaudible) — the tone is not the chopping frequency. (3) "Fan stays up" is not a bug: no hysteresis, 64 → 51 in ≤ 9 s; the *temperature* stays up because the GPU never leaves max clock. (4) The fan hunts 56 ↔ 64 every 6–12 s at a steady temperature (quantisation straddling a curve point) — a B2 lever. (5) The battery exposes `charge_control_{start,end}_threshold` (reads 70/80, not enforced, L-15); `charge_counter` ≈ 8.16 Ah full.
+- DEVICE.md corrected: fan is `hwmon57` now (find by name), 16 `cpu-*` zones (29 counted), USB `online` flag, battery counters, PWM facts, `/var/tmp/armada-baseline` noted.
 
 ---
 
 ## Active blockers
 
-None. Device/repo parity: **overlay v1** (`99-armada-hide-internal-ufs.rules`) pushed 2026-09-06 14:48, reloaded, identical to the repo. `device-state/` re-pulled 2026-09-06 14:48 — identical to the record (Balanced `gpu_max = 0.80`, re-set by the user after the install).
+None. Device/repo parity: **overlay v1** unchanged and applied; nothing under `/etc` touched this session. `/var/tmp/armada-baseline/` on the device = repo `tools/baseline-logger.sh` v2 + two CSVs (pulled to `device-data/`), nothing running.
 
 ---
 
 ## Notes & things to watch
 
-- **Upstream drift: 14 commits** at this `/end` (latest `c68b36a`, bottom-screen brightness persistence) — L-9, rebase at the first quiet point.
-- **Fresh deployments lose `/etc` and `/var`:** SSH off, key gone, Power-tab tweaks back to factory (the user re-set `gpu_max = 0.80` by hand at 14:24). Expect the same after any future installer run or the B10 reflash — not after ordinary OTAs (three-way `/etc` merge, D-4). Before B10: keep `device-state/` current so the UI values can be re-applied from the record.
-- **udev overlay files need a reload after `odin.py push`** (README in `device-overlay/` has the command); consider teaching `push` to do it when it sees `udev/rules.d`.
-- **No SD-card rescue any more:** the card is game storage. A rescue means re-flashing a card from the PC (`flash-armada.ps1`) and switching the ABL boot source.
-- `abl.conf auto_update_enabled=1`: the bootloader can update itself at shutdown after an OTA (D-7 awareness).
-- **Idle load average ~4–5** on the Steam home screen (`steamwebhelper`). B5.
-- `power_supply/battery/power_now` ≈ 67.8 W vs I×V ≈ 4.7 W — unreliable until checked (B4).
-- Android was factory-reset by the install: GameNative, its games, the Download folder backups and the ADB pairing are gone. Claude's memory notes for that side are marked historical.
+- **Upstream drift:** 0 at the rebase (`04dbfc9`); the hook reports the new count at start. Rebase again at a quiet point if it grows (D-2).
+- **Calling `odin.py put`/`get` from Git Bash needs `MSYS_NO_PATHCONV=1`** (the guard refuses a rewritten path rather than creating junk). `run` needs no special care now that the console is UTF-8.
+- **In-game frame cap value for runs 1–2 is unknown** — ask; it decides whether the GPU-at-832 finding means "cap unreachable".
+- **The % battery gauge lies above ~90 %** (98 → 92 read 12 %/h while the sensors said ~1.6 A). Use `bat_uah` deltas, not `%`, for drain.
+- `power_supply/battery/power_now` still unverified (B4).
+- Idle load average ~4–5 on the Steam home screen (B5) — 5.3–5.5 during play too.
+- **Fresh deployments lose `/etc` and `/var`** (SSH, key, Power-tab tweaks, and now `/var/tmp/armada-baseline`). Re-`put` the logger after any installer run.
