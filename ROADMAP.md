@@ -2,6 +2,8 @@
 
 Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised by subsystem. Every block opens with a **baseline measurement** and closes with a **recorded before/after**. Nothing is baked into the image until it has been stable as an `/etc` change (D-4).
 
+**Owner's target (stated 2026-09-07):** maximum battery life at idle and while gaming, while still holding **60 fps in old or light games and 30 fps in modern titles** (reference: FF7 Crisis Core), via two or three QAM profiles retuned for exactly that. Fan noise (D-8) and battery pull the same levers — lower clocks mean less heat and less fan — so the block order stands; the difference is that every block measures **watts**, not just PWM.
+
 **Block numbers are frozen.** Identity is the name. A cut block stays as a labeled gap.
 
 ---
@@ -13,8 +15,8 @@ Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised 
 | B0 | Protocol + device access | **done 2026-09-06** — scaffold, hooks, `tools/odin.py`; SessionStart hook verified in a fresh session (L-2) | — |
 | B1 | Baseline instrumentation | ⬅ CURRENT — not started; rebase first (L-9) | A logger that records temp / PWM / CPU+GPU freq / battery power every few seconds to a CSV, pulled to the PC; one real 30-min play session and one idle session recorded |
 | B2 | Fan + thermal | queued | Fan silent at idle and light load; whine band identified by ear vs PWM; ramp/curve tuned; user signs off after a week of use |
-| B3 | Power profiles + per-game performance | queued | A quiet-but-fast profile between Balanced and Performance; FPS cap / resolution / FEX preset defaults set for the owner's library; before/after temps and battery draw recorded |
-| B4 | Battery + sleep | queued | Idle drain and s2idle drain measured; wake reliability confirmed; drain reduced or explained |
+| B3 | Power profiles + per-game performance | queued | Eco / Balanced / Performance retuned as **a 30-fps "modern" profile and a 60-fps "light" profile** (the three names are hardcoded in `armada-powerd`; a fourth cannot be added), each measured in watts and °C on the owner's library; per-game resolution / FEX defaults set; the gamescope frame-limiter undershoot (upstream #45 / #276 / #322, reproduced on an Odin 3 Max) worked around or fixed before the 30-fps target counts |
+| B4 | Battery + sleep | queued | Idle drain and s2idle drain measured in %/h; deep-sleep entry (`qcom_stats` aosd/cxsd) and Bluetooth power state across s2idle checked on this unit (upstream #264 / #274 / #265); wake reliability confirmed; drain reduced or explained |
 | B5 | Idle CPU load | queued | The ~4–5 load average seen on the Steam home screen understood and reduced or justified |
 | B6 | Services + boot | queued | Every running service justified for this owner; unneeded ones masked via `/etc`; boot time measured |
 | B7 | Display + input + RGB | queued | HDR/brightness/orientation verified; controller emulation chosen; RGB policy set (off by default saves power); calibration done |
@@ -50,9 +52,13 @@ Plan: via the **Fans tab** (UI-owned, D-4) create an `odin3` curve with a 0-PWM 
 
 Levers that exist: `cpu_underclock` tiers (frequency caps → lower DVFS voltage; the only "undervolt" Qualcomm exposes), `cpu_max`, `gpu_min/gpu_max`, governor; per-game FEX preset, resolution, CPU core set / Wine topology, nice, RT scheduling, scheduler (`eevdf`/`cosmos`/`lavd`), gamescope nice. Goal: a Balanced that is quiet but does not leave performance on the table, plus per-game defaults for the owner's actual library. Also question Performance's `gpu_min=1.0`: it pins the GPU at 832 MHz even during CPU-only work like shader compilation, which is heat and fan for nothing (observed 2026-09-05, L-6). Frame-rate caps and resolution (GPU idles between frames) are preferred over blanket `gpu_max` caps. Measure: temps, PWM, battery W, and the owner's perceived smoothness.
 
+**Owner's target (2026-09-07, L-14):** battery first. Two of the three profiles become the deliverable: a **30-fps profile** for modern titles (reference: FF7 Crisis Core) and a **60-fps profile** for old or light games; the third is whatever the measurements say is worth keeping. **Known blocker:** gamescope's frame limiter undershoots (a 30 cap lands at 27–28) and *lowering* the cap lowers performance further — upstream #45 / #276 / #322, reproduced on an Odin 3 Max, no fix landed as of 2026-09-07. Workarounds to measure, one at a time: the game's own limiter; a `DXVK_FRAME_RATE` env via the Compatibility tab; a `gpu_min` floor so the governor does not collapse when the cap lowers load.
+
 ## B4 — Battery + sleep
 
 Measure idle drain on battery (screen on/off), s2idle drain overnight, wake reliability. Upstream defaulted every device to native s2idle on 2026-09-03; verify it's right for this unit. Check RGB, Wi-Fi power save, Bluetooth, USB gadget, tailscale, and any polling daemon as drain sources.
+
+**Plan (2026-09-07, L-13), measure first:** (1) `armada-sleep-debug prepare` → `rtcwake -m freeze -s 30` → `collect`: do the `qcom_stats` aosd/cxsd counters tick on this SM8750 (they never do on the SM8550, upstream #274: USB PHY vote + SD IRQ storm), and is Bluetooth still `Powered: yes` across s2idle (upstream #264: an Odin 2 lost 25 % in 90 min; `rfkill block bluetooth` gave ~1 %/h)? (2) One overnight with Bluetooth on, one with it blocked; the user reads the battery % before/after and touches the left side of the screen (#265, warm on an Odin 3 Max). (3) If Bluetooth is the drain: a drop-in `/etc/systemd/system-sleep/` hook that rfkill-blocks it on `pre` and unblocks on `post` — overlay file, no upstream edit, B9 PR candidate (upstream's rfkill logic exists only in the fake-suspend script and has been commented out there since `b92c959`, over Wi-Fi resume time, not Bluetooth). (4) If the counters stay at zero: check the `*.usb` / PHY `runtime_status`; a stuck PHY is a kernel patch → upstream report, not `/etc`.
 
 ## B5 — Idle CPU load
 
