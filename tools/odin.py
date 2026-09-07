@@ -11,6 +11,8 @@ device interaction goes through a single, logged, reviewable path.
   python tools/odin.py probe               read-only snapshot -> device-data/probe-<ts>.txt (git-ignored)
   python tools/odin.py pull                copy UI-owned configs -> device-state/ (committed) and show the git diff
   python tools/odin.py push [--yes]        copy device-overlay/etc/** -> /etc (dry-run unless --yes), then reload the daemon
+  python tools/odin.py put <local> <remote> copy one file TO the device (LF-normalised), chmod +x if it is a script
+  python tools/odin.py get <remote> [local] copy one file FROM the device (default: device-data/<basename>)
 
 Host: --host or ODIN_HOST (default below). The IP is DHCP and has moved before.
 """
@@ -170,7 +172,40 @@ def cmd_push(args: argparse.Namespace) -> None:
         print("\nDry run. Re-run with --yes to apply.")
 
 
+def remote_path(p: str) -> str:
+    # Git Bash rewrites a leading "/var/..." argument into "C:/Program Files/Git/var/..."
+    # before Python runs (MSYS path conversion; bit us 2026-09-07). Refuse anything
+    # that is not an absolute POSIX path rather than create junk on the device.
+    if not p.startswith("/") or ":" in p.split("/")[0]:
+        raise SystemExit(f"remote path must be absolute POSIX (got {p!r}); from Git Bash set MSYS_NO_PATHCONV=1")
+    return p
+
+
+def cmd_put(args: argparse.Namespace) -> None:
+    # Same path as `push`: file body over ssh stdin, LF-normalised by ssh().
+    local = pathlib.Path(args.local)
+    remote_path(args.remote)
+    body = local.read_text(encoding="utf-8")
+    remote = args.remote
+    mode = "chmod +x" if local.suffix in (".sh", ".py") else "true"
+    ssh(f"mkdir -p \"$(dirname '{remote}')\" && cat > '{remote}' && {mode} '{remote}'", stdin=body)
+    print(f"put {local} -> {remote} ({len(body.encode())} bytes)")
+
+
+def cmd_get(args: argparse.Namespace) -> None:
+    remote_path(args.remote)
+    local = pathlib.Path(args.local) if args.local else DEVICE_DATA / pathlib.Path(args.remote).name
+    if not scp_from(args.remote, local):
+        raise SystemExit(f"get failed: {args.remote}")
+    print(f"got {args.remote} -> {local} ({local.stat().st_size} bytes)")
+
+
 def main() -> None:
+    # Windows consoles default to cp1252; a game title or a busctl glyph in device
+    # output must never crash `run` (it did on 2026-09-07). Replace, don't raise.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--host", help="override device IP (or set ODIN_HOST)")
     sub = ap.add_subparsers(dest="command", required=True)
@@ -180,6 +215,8 @@ def main() -> None:
     sub.add_parser("probe").set_defaults(fn=cmd_probe)
     sub.add_parser("pull").set_defaults(fn=cmd_pull)
     p = sub.add_parser("push"); p.add_argument("--yes", action="store_true"); p.set_defaults(fn=cmd_push)
+    p = sub.add_parser("put"); p.add_argument("local"); p.add_argument("remote"); p.set_defaults(fn=cmd_put)
+    p = sub.add_parser("get"); p.add_argument("remote"); p.add_argument("local", nargs="?"); p.set_defaults(fn=cmd_get)
     args = ap.parse_args()
     if args.host:
         os.environ["ODIN_HOST"] = args.host
