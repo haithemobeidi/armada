@@ -62,7 +62,7 @@ ABL, partitions, kernel args, the boot image, and any "install to internal stora
 
 ## D-8 — Whole-OS scope, fan noise first, measurement before every change (2026-09-05)
 
-The user's goal is every aspect of the OS tuned for this device and their use, "A to Z, slowly but sure". The roadmap is organised as blocks by subsystem, fan/thermal first because it is the most audible. Every block opens with a baseline measurement; no change ships without the signal it targets having been recorded before and after (`docs/WORK_STYLE.md` → "Measure before you change").
+The user's goal is every aspect of the OS tuned for this device and their use, "A to Z, slowly but sure". The roadmap is organised as blocks by subsystem, fan/thermal first because it is the most audible. Every block opens with a baseline measurement; no change ships without the signal it targets having been recorded before and after (`CLAUDE.md` → Project rules → Device work; before 2026-09-11 in `docs/WORK_STYLE.md`).
 
 ## D-9 — Install to internal storage; Android kept at 16 GiB (2026-09-06)
 
@@ -73,3 +73,13 @@ The user chose internal storage over the SD card, keeping Android only as a fall
 **What it does.** Deletes and recreates `userdata` at 16 GiB, zeroes its first 8 MiB (Android factory-resets on its next boot: apps and `/sdcard` gone, the Android system partitions kept), creates the three Armada partitions in the freed space, deploys the booted image, and dual-boots. The SD card stays a bootable Armada and is the recovery path until internal boot is verified with the card out. Reverts: `armada-installer reset` from the SD card, or ABL "UNINSTALL CFW & EXPAND USERDATA" — both keep the Android system and factory-reset it again.
 
 **Revisit if:** the internal install fails to boot (stay on SD, run `reset`), or Android is ever wanted for real (reset returns the space).
+
+## D-10 — Protocol migrated to the global Knowledge Base layer (2026-09-11)
+
+**Decision:** the session protocol is no longer copied into this repo. The work style and the session lifecycle are imported live from `<KB>/claude-project-template/global/` via `~/.claude/CLAUDE.md`; `/start` and `/end` are the global commands; the scripts in `.claude/scripts/`, `.claude/settings.json`, and `.claude/agents/` are byte-identical to the template and checked by `check-template-drift.py`. Everything project-specific lives in two places: `CLAUDE.md` (rules, pointers, explicit overrides) and `.claude/protocol.json` (`check_command = bash tools/check-delta.sh`, `push_policy = standing`, the generated-path skip list, default ledger caps, single track).
+
+**What moved where:** `PROTOCOL.md` → the fork model and the device model became Project rules and Overrides in `CLAUDE.md`; `docs/WORK_STYLE.md` → the device-specific line of each rule stayed in `CLAUDE.md`, the transferable part is the global work style; the old `/end` build guard (py_compile, `bash -n`, configparser on every overlay `.conf`) → `tools/check-delta.sh`, which now also runs shellcheck and warns on unindexed delta files; the ledger header → the template's (worthiness test, 600-char cap, 30 open soft max, 45-day stale, 7-day prune). One-time triage at migration: L-13 shortened to the loop + a pointer (its analysis was already in ROADMAP B4).
+
+**What the template does not do that the old copy did — now text rules in `CLAUDE.md` instead of hooks:** the branch guard no longer trips on `main` (the template guards worktrees and `claude/*` only); the start hook fetches only `origin`, so the upstream drift count is a rule Claude runs at start; the statusline no longer shows `upstream +N`; the index hook no longer skips firmware/binary suffixes. Candidate template improvements, to be upstreamed to the KB rather than patched here: `protected_branches` and `upstream_ref` keys in `protocol.json`; `newline="\n"` when the index hook appends to `pending-index-updates.txt` (the old copy had that fix — on Windows the file otherwise gets CRLF, which bit us 2026-09-05). Also: the start hook counts the template ledger header's example lines (inside an HTML comment) as open items — this repo's header carries no examples; the hook should skip comment blocks.
+
+**How to apply:** never edit a template-managed file here; edit `protocol.json` or `CLAUDE.md`, or improve the template in the KB and resync with `check-template-drift.py --sync`. After every KB pull, rerun `install-global.py`.

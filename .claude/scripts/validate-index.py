@@ -3,15 +3,15 @@
 Bidirectional CODEBASE_INDEX validator (reverse direction).
 
 The PostToolUse hook (track-new-file.py) covers the forward direction:
-files on disk absent from the index. This script covers the reverse:
-index rows pointing at files that no longer exist (phantom rows left by
-renames, splits, deletes — or by an upstream rebase that removed a file
-we had annotated).
+files on disk that are absent from the index. This script covers the
+reverse: index rows pointing at files that no longer exist on disk
+(phantom rows — left behind by renames, splits, or deletes).
 
 Usage (called from /end Step 1c):
     python .claude/scripts/validate-index.py
 
-Prints one line per phantom path. Exits 0 always — never blocks.
+Prints one line per phantom path to stdout. Exits 0 always — never
+blocks Claude's work.
 """
 
 import os
@@ -27,11 +27,14 @@ ROW_RE = re.compile(r"^\|\s+`([^`]+)`\s+\|")
 def main() -> None:
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if not project_dir:
+        # Fallback when run manually outside a hook context.
+        # Script lives at <root>/.claude/scripts/validate-index.py
         script_dir = pathlib.Path(__file__).resolve().parent  # .claude/scripts/
-        project_dir = str(script_dir.parent.parent)
+        project_dir = str(script_dir.parent.parent)           # project root
 
     project_root = pathlib.Path(project_dir).resolve()
     index_path = project_root / "docs" / "CODEBASE_INDEX.md"
+
     if not index_path.exists():
         sys.exit(0)
 

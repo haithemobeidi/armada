@@ -4,7 +4,7 @@
 
 **Maintenance:** enforced by the `PostToolUse` hook (`.claude/scripts/track-new-file.py`) → `.claude/pending-index-updates.txt` → `/end` Step 1. Reverse check: `validate-index.py`.
 
-**Last updated:** 2026-09-05 (session 1).
+**Last updated:** 2026-09-11 (protocol migration, D-10).
 
 ---
 
@@ -12,10 +12,9 @@
 
 | File | Purpose |
 |---|---|
-| `CLAUDE.md` | Auto-loaded project context: what this fork is, locked decisions table, code rules, navigation docs, work-style triggers. |
-| `PROTOCOL.md` | Single source of truth for the session lifecycle, the fork model (main mirrors upstream, rebase policy), the device model (repo is the record, `/etc` first), hooks, commands. |
+| `CLAUDE.md` | Project file — what is different about this repo (fork model, device model, device-work rules, overrides of the global rules, pointers). Augments the global work style + protocol imported from the Knowledge Base (D-10). |
 | `ROADMAP.md` | Status-at-a-glance spine (B0–B10, frozen numbers) + one section per block + backlog. |
-| `DECISIONS.md` | D-1…D-8: fork layout, rebase-over-merge, push authorization, `/etc`-first + config ownership, index scope, no worktrees, boot-path safety, whole-OS scope. |
+| `DECISIONS.md` | D-1…D-10: fork layout, rebase-over-merge, push authorization, `/etc`-first + config ownership, index scope, no worktrees, boot-path safety, whole-OS scope, internal install, protocol migration to the global layer. |
 | `.gitignore` | **Modified upstream file.** Added Claude protocol state (`pending-index-updates.txt`, `settings.local.json`, `worktrees/`) and `device-data/` (raw device pulls, regenerated). Why: protocol bookkeeping must never be committed; raw logs belong in summaries, not git. Never upstreamed. |
 | `.gitattributes` | Forces LF in the working copy on every platform (`* text=auto eol=lf`) + binary markers for firmware/blobs. Why: this Windows checkout was warning "LF will be replaced by CRLF" on every file, and CRLF must never reach the device's `/etc`. Upstream has no `.gitattributes`; candidate to upstream. |
 
@@ -26,7 +25,6 @@
 | `docs/CURRENT_STATE.md` | Rolling snapshot: NEXT ACTION, current block, build status, this-session deltas, watch list. Overwritten at `/end`. |
 | `docs/HANDOFF_LOG.md` | Append-only one line per session. |
 | `docs/SESSION_LEDGER.md` | Append-and-strike ledger of open session-scoped items (L-n IDs). |
-| `docs/WORK_STYLE.md` | Long-form rules: measure-before-change, device-observable pause-points, don't-reinvent, grounded pushback, one source of truth, pacing, audits, `*kbdoc`. |
 | `docs/DEVICE.md` | The handheld: identity, SSH access, CPU/GPU frequency tables, thermal zones + fan (no tach), power supplies, storage layout, config ownership table, **applied overlay version**, backups + recovery ladder, Android-side gotchas, fan-noise leads. |
 | `docs/ARMADA_CONTROL.md` | Every Armada Control setting by tab, the file it writes, and what it means on SM8750; what has no UI. |
 
@@ -35,6 +33,7 @@
 | File | Purpose |
 |---|---|
 | `tools/odin.py` | The one door to the device over OpenSSH: `status`, `run`, `sudo`, `probe` (→ `device-data/`), `pull` (UI-owned configs → `device-state/`), `push` (`device-overlay/etc/**` → `/etc`, dry-run unless `--yes`, restarts `armada-powerd`), `put` (one file → device, LF-normalised, `+x` for scripts), `get` (one file → `device-data/`). Console forced to UTF-8 (a game title crashed `run` on cp1252, 2026-09-07); `put`/`get` refuse a non-POSIX remote path because Git Bash rewrites `/var/...` into `C:/Program Files/Git/var/...` unless `MSYS_NO_PATHCONV=1`. |
+| `tools/check-delta.sh` | `/end` check (`check_command` in `protocol.json`): over every file in the fork delta vs the merge-base with `upstream/main` — Python syntax, `bash -n` + shellcheck on shell files, configparser on every `device-overlay/**.conf` (a malformed one is dropped silently by `armada-powerd`); warns on delta files missing from this index. |
 | `tools/baseline-logger.sh` | B1's read-only CSV logger, run **on the device** (`put` it to `/var/tmp/armada-baseline/`, `get` the CSV). One row per 3 s: the daemon's own D-Bus `Temperature`/`FanPwm`/`Profile`, raw `pwm1` (fan found by hwmon name), top-3 average and max of the counted thermal zones (same zone set and average as `armada-powerd`), CPU policy0/policy6 and GPU MHz, battery status/%/µA/µV/W, USB `online`, load, Steam appid. Never writes sysfs; `OUT.csv.pid` holds the PID for `kill`. |
 
 ## device-overlay/ (repo-owned, pushed to the device)
@@ -53,15 +52,20 @@
 | `device-state/etc__armada__abl.conf` | `auto_update_enabled=1` — bootloader auto-update at shutdown is on. |
 | `device-state/var__lib__armada__powerd.state` | Daemon's persisted profile / GPU level / manual clock. |
 
-## .claude/
+## .claude/ (template-managed unless noted — never hand-edit; `check-template-drift.py` compares against the KB template)
 
 | File | Purpose |
 |---|---|
-| `.claude/settings.json` | Statusline + hooks wiring (SessionStart / PostToolUse / Stop). |
-| `.claude/commands/start.md` | `/start`: branch guard (worktree, `claude/*`, `main`), two-remote sync guard, read state, cross-check, report incl. upstream drift + device line. |
-| `.claude/commands/end.md` | `/end`: guards, build guard (py_compile / bash -n / configparser on overlays), index drain + backstop vs `upstream/main` + phantom rows, ledger reconcile, **device parity check**, spine + CURRENT_STATE, handoff line, commit + push + clean tree. |
-| `.claude/scripts/session-start-context.py` | SessionStart hook: branch guard, fetch origin + upstream, refuse stale injection, upstream drift count, inject CURRENT_STATE + open ledger + spine + last 5 handoff lines + cross-check directive. |
-| `.claude/scripts/track-new-file.py` | PostToolUse hook: queue any touched file absent from this index; skips bookkeeping, `.claude/`, build output, caches, firmware/binary suffixes. |
-| `.claude/scripts/stop-clean-tree-check.py` | Stop hook: block the stop only if a `Session:` commit landed <5 min ago and the tree is dirty. |
-| `.claude/scripts/validate-index.py` | Reverse index check: rows pointing at files that no longer exist. |
-| `.claude/scripts/statusline.py` | `block | build | branch | dirty | upstream +N` from CURRENT_STATE + local git refs. |
+| `.claude/protocol.json` | **Project-owned.** The scripts' settings: `check_command = bash tools/check-delta.sh`, `push_policy = standing` (D-3), generated-path skip list for the index hook, ledger caps, single track. |
+| `.claude/settings.json` | Hook wiring (SessionStart / PostToolUse / Stop) + statusline + read-only Bash allowlist. |
+| `.claude/agents/planner.md` | Read-only planner subagent — implementation plans with declared pause-points. |
+| `.claude/agents/reviewer.md` | Read-only reviewer subagent — independent diff review against the rules. |
+| `.claude/agents/explorer.md` | Read-only explorer subagent — adjacent questions with `file:line` citations. |
+| `.claude/scripts/protocol_config.py` | Shared loader for `protocol.json` + template-drift helpers; imported by every script. |
+| `.claude/scripts/session-start-context.py` | SessionStart hook — worktree guard, global-install check, fetch origin + stale refusal, injects CURRENT_STATE + open ledger (capped) + spine + handoff lines + drift note + cross-check directive. The `main` guard and the upstream drift count are CLAUDE.md rules now (D-10). |
+| `.claude/scripts/track-new-file.py` | PostToolUse hook — queues unindexed paths to `pending-index-updates.txt` (skip prefixes from `protocol.json`). |
+| `.claude/scripts/stop-clean-tree-check.py` | Stop hook — blocks a stop when a Session commit just landed and the tree is still dirty. |
+| `.claude/scripts/validate-index.py` | `/end` Step 1c — flags index rows pointing at deleted files (a rebase that removed an annotated upstream file shows up here). |
+| `.claude/scripts/scan-secrets.py` | `/end` Step 0c — content-based secret scan of everything heading for a commit; `--history` audits everything pushable. |
+| `.claude/scripts/check-template-drift.py` | Compares this project's protocol machinery against the Knowledge Base template; `--sync` resyncs. |
+| `.claude/scripts/statusline.py` | Statusline — phase + build status from CURRENT_STATE, branch + dirty count from git. |
