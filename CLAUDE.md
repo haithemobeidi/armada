@@ -58,7 +58,7 @@ bash tools/check-delta.sh              # /end check: python syntax, bash -n, she
 ## Project rules
 
 **Session start and end — additions to the global steps:**
-- **At session start** → also `git fetch upstream --prune` and report `git rev-list --count HEAD..upstream/main` as the upstream drift count, plus the overlay version `docs/DEVICE.md` says the device runs. Never rebase during start or end. Don't SSH at start unless the NEXT ACTION needs it.
+- **At session start** → the hook reports the upstream drift count (`upstream_ref` in `protocol.json`); state it, plus the overlay version `docs/DEVICE.md` says the device runs. Never rebase during start or end. Don't SSH at start unless the NEXT ACTION needs it.
 - **At `/end` Step 1b** → the backstop covers the whole fork delta (`git diff --name-only $(git merge-base HEAD upstream/main)`), not just `HEAD`; `check-delta.sh` prints unindexed delta files as warnings.
 - **At `/end`, if `device-overlay/` or the device changed** → `docs/DEVICE.md` "Applied overlay" names the version the device runs. Repo/device disagreement is a recorded blocker in CURRENT_STATE, never silent.
 - **At `/end` Step 4b** → confirm `origin/odin3-tuning == HEAD`, not `origin/main`.
@@ -75,7 +75,7 @@ bash tools/check-delta.sh              # /end check: python syntax, bash -n, she
 - **Audits** → scope is the fork delta and the device's runtime state, never upstream's code style. Name the measured win first ("service X costs Y mW at idle").
 
 **Repo:**
-- **Never commit to `main`.** A session that finds itself on `main` stops and runs `git switch odin3-tuning` (tree clean) before anything else.
+- **Never commit to `main`.** The start hook trips on it (`protected_branches`); a session that finds itself there runs `git switch odin3-tuning` (tree clean) before anything else.
 - **Never commit a device change the user has not observed.**
 - **The ledger is not for hardware facts** (`docs/DEVICE.md`) or block status (the spine).
 
