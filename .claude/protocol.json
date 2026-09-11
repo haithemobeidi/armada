@@ -13,6 +13,12 @@
   "$push_policy": "\"ask\" = never push without asking (default). \"standing\" = session-end pushes are pre-authorised so work can continue from another machine — record that authorisation in DECISIONS.md first. Force pushes always need per-instance confirmation regardless.",
   "push_policy": "standing",
 
+  "$protected_branches": "Branches a session must never commit to. Here: main is a read-only mirror of upstream/main (D-1).",
+  "protected_branches": ["main"],
+
+  "$upstream_ref": "The ref this branch is rebased onto (D-2). The start hook fetches upstream and reports the drift count; the statusline shows upstream +N.",
+  "upstream_ref": "upstream/main",
+
   "$secret_scan": "Run .claude/scripts/scan-secrets.py at /end Step 0c. Content-based; .gitignore is only a blocklist.",
   "secret_scan": true,
 

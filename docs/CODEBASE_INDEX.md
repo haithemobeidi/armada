@@ -56,16 +56,16 @@
 
 | File | Purpose |
 |---|---|
-| `.claude/protocol.json` | **Project-owned.** The scripts' settings: `check_command = bash tools/check-delta.sh`, `push_policy = standing` (D-3), generated-path skip list for the index hook, ledger caps, single track. |
+| `.claude/protocol.json` | **Project-owned.** The scripts' settings: `check_command = bash tools/check-delta.sh`, `push_policy = standing` (D-3), `protected_branches = ["main"]` (D-1), `upstream_ref = "upstream/main"` (D-2), generated-path skip list for the index hook, ledger caps, single track. |
 | `.claude/settings.json` | Hook wiring (SessionStart / PostToolUse / Stop) + statusline + read-only Bash allowlist. |
 | `.claude/agents/planner.md` | Read-only planner subagent — implementation plans with declared pause-points. |
 | `.claude/agents/reviewer.md` | Read-only reviewer subagent — independent diff review against the rules. |
 | `.claude/agents/explorer.md` | Read-only explorer subagent — adjacent questions with `file:line` citations. |
 | `.claude/scripts/protocol_config.py` | Shared loader for `protocol.json` + template-drift helpers; imported by every script. |
-| `.claude/scripts/session-start-context.py` | SessionStart hook — worktree guard, global-install check, fetch origin + stale refusal, injects CURRENT_STATE + open ledger (capped) + spine + handoff lines + drift note + cross-check directive. The `main` guard and the upstream drift count are CLAUDE.md rules now (D-10). |
+| `.claude/scripts/session-start-context.py` | SessionStart hook — worktree guard, global-install check, fetch origin + stale refusal, trips on `main` (`protected_branches`), fetches upstream and reports the drift count (`upstream_ref`), injects CURRENT_STATE + open ledger (capped, comment blocks skipped) + spine + handoff lines + drift note + cross-check directive. |
 | `.claude/scripts/track-new-file.py` | PostToolUse hook — queues unindexed paths to `pending-index-updates.txt` (skip prefixes from `protocol.json`). |
 | `.claude/scripts/stop-clean-tree-check.py` | Stop hook — blocks a stop when a Session commit just landed and the tree is still dirty. |
 | `.claude/scripts/validate-index.py` | `/end` Step 1c — flags index rows pointing at deleted files (a rebase that removed an annotated upstream file shows up here). |
 | `.claude/scripts/scan-secrets.py` | `/end` Step 0c — content-based secret scan of everything heading for a commit; `--history` audits everything pushable. |
 | `.claude/scripts/check-template-drift.py` | Compares this project's protocol machinery against the Knowledge Base template; `--sync` resyncs. |
-| `.claude/scripts/statusline.py` | Statusline — phase + build status from CURRENT_STATE, branch + dirty count from git. |
+| `.claude/scripts/statusline.py` | Statusline — phase + build status from CURRENT_STATE, branch + dirty count from git, `upstream +N` against the local `upstream/main` ref (fresh as of the last fetch). |
