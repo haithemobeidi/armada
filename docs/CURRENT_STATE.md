@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-09-11 (session 5 wrap — rebase, idle CPU solved, fan-off curve, sleep measured + overlay v2)
+**Last updated:** 2026-09-11 15:25 (session 5 `/end` — rebase, idle CPU solved, fan-off curve, sleep measured + overlay v2; overnight check L-19 queued)
 
 > This file carries only the **NEXT ACTION** + this-session deltas. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,7 +8,7 @@
 
 ## 📍 NEXT ACTION
 
-**B4, sleep with a game open (1.65 W vs 0.47 W).** One 10-min sleep with the game **muted / its audio device closed** (user parks it in a menu, says ready; `/var/tmp/gamesleep10.sh` on the device does the cycle), then one with the GPU forced to its floor via the Power tab — one variable each, `charge_counter` deltas. Then: the **idle-to-sleep timeout** (awake idle is 2.1 W screen-on; Steam's setting), an **upstream issue** for SM8750 sleep depth with today's numbers (ROADMAP B4, `device-data/sleep-test-20260911-122117/`), and the L-18 fan sign-off by ear. Ask the user for last night's battery % before/after sleep (hook v2 live since 14:23). B1's idle recording + pitch sweep stay paused behind B4.
+**First, read the overnight result (L-19):** the user slept the device ~15:30 on 2026-09-11 with the game quit, overlay v2 live and the fan-off curve; ~7 h later they report battery % at wake, Wi-Fi state, Steam reconnect time, fan noise at idle. Expected ~5–6 % per 8 h at 0.47 W; a much bigger drop means something (audio path? Bluetooth? a self-wake) is different overnight — pull `journalctl` for the sleep window and `charge_counter` deltas first. Then **B4, sleep with a game open (1.65 W vs 0.47 W).** One 10-min sleep with the game **muted / its audio device closed** (user parks it in a menu, says ready; `/var/tmp/gamesleep10.sh` on the device does the cycle), then one with the GPU forced to its floor via the Power tab — one variable each, `charge_counter` deltas. Then: the **idle-to-sleep timeout** (awake idle is 2.1 W screen-on; Steam's setting), an **upstream issue** for SM8750 sleep depth with today's numbers (ROADMAP B4, `device-data/sleep-test-20260911-122117/`), and the L-18 fan sign-off by ear. Ask the user for last night's battery % before/after sleep (hook v2 live since 14:23). B1's idle recording + pitch sweep stay paused behind B4.
 
 **Current phase:** B4 Battery + sleep — game-sleep audio test, idle timeout, upstream issue (the statusline parses this line)
 
