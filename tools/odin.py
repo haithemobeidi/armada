@@ -162,12 +162,19 @@ def cmd_push(args: argparse.Namespace) -> None:
         print(f"{'PUSH' if args.yes else 'would push'}  {local.relative_to(REPO)}  ->  {remote}")
         if args.yes:
             # Two-step keeps the file content out of the command line and out of sudo's stdin.
-            ssh("cat > /tmp/odin-push.tmp", stdin=local.read_text(encoding="utf-8"))
-            sudo(f"install -D -m 0644 /tmp/odin-push.tmp {remote} && rm -f /tmp/odin-push.tmp")
+            body = local.read_text(encoding="utf-8")
+            # systemd-sleep and udev only run hooks that are executable; Windows checkouts carry no mode bit.
+            mode = "0755" if body.startswith("#!") else "0644"
+            ssh("cat > /tmp/odin-push.tmp", stdin=body)
+            sudo(f"install -D -m {mode} /tmp/odin-push.tmp {remote} && rm -f /tmp/odin-push.tmp")
     if args.yes:
         if any("armada/power-profiles.conf" in p.as_posix() for p in files):
             print("NOTE: power-profiles.conf is UI-owned (D-4); pushing it will fight Armada Control.")
-        print(sudo("systemctl restart armada-powerd && sleep 2 && journalctl -b -u armada-powerd --no-pager -q | tail -3", check=False))
+        # armada-powerd only re-reads /etc/armada on restart; anything else (udev, sleep hooks) needs no restart.
+        if any("/etc/armada/" in ("/" + p.relative_to(OVERLAY).as_posix()) for p in files):
+            print(sudo("systemctl restart armada-powerd && sleep 2 && journalctl -b -u armada-powerd --no-pager -q | tail -3", check=False))
+        else:
+            print("no /etc/armada file pushed; armada-powerd left alone")
     else:
         print("\nDry run. Re-run with --yes to apply.")
 

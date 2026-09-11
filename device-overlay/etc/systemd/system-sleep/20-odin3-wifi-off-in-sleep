@@ -1,0 +1,19 @@
+#!/bin/bash
+# Odin 3: power the Wi-Fi chip (WCN7860) down for the duration of a suspend.
+#
+# Why: measured 2026-09-11 on this unit (ROADMAP B4), 10-min sleeps by charge_counter:
+#   Wi-Fi left as is 172 mA ≈ 0.75 W   |   rfkill-blocked 108 mA ≈ 0.47 W
+# NetworkManager already drops the connection at suspend, but the radio stays powered
+# (the card reports runtime_status=active); only an rfkill block turns it off. Nothing
+# can use the network while the CPU cluster sleeps anyway. 'post' unblocks and NM reconnects.
+#
+# Revert: delete this file (or `chmod -x` it). If Wi-Fi ever stays off after a wake:
+# `rfkill unblock wifi`, or toggle Wi-Fi in the Quick Access menu.
+set -u
+[[ "${2:-}" == suspend ]] || exit 0
+command -v rfkill >/dev/null || exit 0
+case "${1:-}" in
+    pre)  rfkill block wifi ;;
+    post) rfkill unblock wifi ;;
+esac
+exit 0

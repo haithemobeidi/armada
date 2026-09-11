@@ -32,7 +32,7 @@
 
 | File | Purpose |
 |---|---|
-| `tools/odin.py` | The one door to the device over OpenSSH: `status`, `run`, `sudo`, `probe` (→ `device-data/`), `pull` (UI-owned configs → `device-state/`), `push` (`device-overlay/etc/**` → `/etc`, dry-run unless `--yes`, restarts `armada-powerd`), `put` (one file → device, LF-normalised, `+x` for scripts), `get` (one file → `device-data/`). Console forced to UTF-8 (a game title crashed `run` on cp1252, 2026-09-07); `put`/`get` refuse a non-POSIX remote path because Git Bash rewrites `/var/...` into `C:/Program Files/Git/var/...` unless `MSYS_NO_PATHCONV=1`. |
+| `tools/odin.py` | The one door to the device over OpenSSH: `status`, `run`, `sudo`, `probe` (→ `device-data/`), `pull` (UI-owned configs → `device-state/`), `push` (`device-overlay/etc/**` → `/etc`, dry-run unless `--yes`, mode 0755 for shebang files so sleep/udev hooks run, restarts `armada-powerd`), `put` (one file → device, LF-normalised, `+x` for scripts), `get` (one file → `device-data/`). Console forced to UTF-8 (a game title crashed `run` on cp1252, 2026-09-07); `put`/`get` refuse a non-POSIX remote path because Git Bash rewrites `/var/...` into `C:/Program Files/Git/var/...` unless `MSYS_NO_PATHCONV=1`. |
 | `tools/check-delta.sh` | `/end` check (`check_command` in `protocol.json`): over every file in the fork delta vs the merge-base with `upstream/main` — Python syntax, `bash -n` + shellcheck on shell files, configparser on every `device-overlay/**.conf` (a malformed one is dropped silently by `armada-powerd`); warns on delta files missing from this index. |
 | `tools/baseline-logger.sh` | B1's read-only CSV logger, run **on the device** (`put` it to `/var/tmp/armada-baseline/`, `get` the CSV). One row per 3 s: the daemon's own D-Bus `Temperature`/`FanPwm`/`Profile`, raw `pwm1` (fan found by hwmon name), top-3 average and max of the counted thermal zones (same zone set and average as `armada-powerd`), CPU policy0/policy6 and GPU MHz, battery status/%/µA/µV/W, USB `online`, load, Steam appid. Never writes sysfs; `OUT.csv.pid` holds the PID for `kill`. |
 
@@ -42,6 +42,7 @@
 |---|---|
 | `device-overlay/README.md` | Layout rules: mirrors `/etc`; only files with no Armada Control writer; every file's header says what it does and how to revert. v1 since 2026-09-06. |
 | `device-overlay/etc/udev/rules.d/99-armada-hide-internal-ufs.rules` | udev rule: `UDISKS_IGNORE=1` on every block device under the SoC's UFS host (`KERNELS=="*.ufs"`), so udisks flags the internal chip `HintIgnore` and Steam's Storage page stops listing it as an empty 464.5 GB drive (L-12). Header carries the apply/revert commands. Upstream candidate: matches by parent chain, not drive letter. |
+| `device-overlay/etc/systemd/system-sleep/20-odin3-wifi-off-in-sleep` | systemd-sleep hook: `rfkill block wifi` on `pre`, `unblock` on `post`. Why we diverge: upstream only lets NetworkManager disconnect at suspend; the WCN7860 stays powered and costs ~0.28 W all night on this unit (10-min sleeps: 0.75 W → 0.47 W, ROADMAP B4, 2026-09-11). Revert: delete the file; `rfkill unblock wifi` if a wake ever leaves it off. Pushed 2026-09-11 14:23 (overlay v2). |
 
 ## device-state/ (UI-owned configs as last pulled — a record, never pushed)
 
