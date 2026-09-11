@@ -28,7 +28,7 @@ Whole-OS tuning of ArmadaOS for one AYN Odin 3, one owner. Blocks are organised 
 
 ## B0 — Protocol + device access
 
-Copy the session protocol from the Checkpoint / KB template, adapt it for a fork with a device (`PROTOCOL.md`), get passwordless SSH to the handheld, take a first read-only snapshot, and record everything learned in `docs/DEVICE.md` and `docs/ARMADA_CONTROL.md`.
+Copy the session protocol from the Checkpoint / KB template, adapt it for a fork with a device (`PROTOCOL.md`; migrated to the global KB layer + `CLAUDE.md` on 2026-09-11, D-10), get passwordless SSH to the handheld, take a first read-only snapshot, and record everything learned in `docs/DEVICE.md` and `docs/ARMADA_CONTROL.md`.
 
 **Done so far (2026-09-05):** protocol files, hooks, commands; SSH key installed (`armada@192.168.1.188`); snapshot taken — SoC topology, thermal zones, hwmon, devfreq, battery, running services, storage layout, bootc image. Key findings: the fan has **no tachometer** (RPM unreadable, only PWM); Armada Control ships a **Fans tab** with a curve editor that already supports fan-stop; the UI owns `power-profiles.conf` (D-4 corrected accordingly); prime cores top out at 4089.6 MHz in the kernel table, not the spec-sheet 4320.
 

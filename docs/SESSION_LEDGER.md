@@ -1,33 +1,48 @@
 # Session Ledger — open items that must not get lost
 
 > **What this is:** the append-and-strike ledger for session-scoped open items —
-> queued tests, gates, deferred decisions, watch items, "check on the device
-> later". Anything phrased like "next session," "before the rebuild," "queued,"
-> "check later," or "watch" gets a line HERE at the moment it's said.
+> queued tests, pre-release gates, riders, deferred decisions, watch items.
+> Anything phrased like "next session," "before release," "rider," "queued,"
+> or "check later" gets a line HERE at the moment it's said.
 >
-> **Rules (full rationale in `PROTOCOL.md` → "Open-item ledger discipline"):**
+> **Rules** (full rationale in the global `PROTOCOL.md` → "The ledger at the moment of the event"):
 >
 > - **Append at the moment of queueing; strike at the moment of resolution.**
->   Never wait for /end — long sessions get context-compacted and end-of-session
->   recall loses early facts.
+>   Never wait for /end — end-of-session recall is what loses items (long
+>   sessions get context-compacted; minute-5 facts don't survive to an
+>   hour-4 wrap).
+> - **Worthiness — all four must hold for a line to earn an ID:** (1) an open
+>   loop a future session must act on, with a concrete done-condition;
+>   (2) not tracked elsewhere (bugs → the bug doc, features → the backlog,
+>   status → the spine); (3) can't just be done now (under ~10 minutes ⇒ do
+>   it); (4) one ID per loop — sub-facts ride the parent item.
+> - **Size — HARD cap per item** (`.claude/protocol.json` → `ledger.item_max_chars`,
+>   default 600): the ID line plus its continuation lines. Longer analysis
+>   goes to a bug entry, a backlog entry, `docs/notes/<ID>.md`, or a DECISIONS
+>   entry; the ledger line keeps the loop and a pointer. The start hook
+>   truncates over-cap items and names them. Closure evidence is one line.
 > - Never rewrite or regenerate this file. Lines are only appended, or edited
->   in place from `[ ]` to `[x]` (done — append `→ DONE <date>: <one-line
->   evidence>`) or `[-]` (dropped — append the reason).
-> - Don't strike an open item you don't recognize — it may belong to a session
->   on the other machine.
-> - `/end` reconciles: disposition every `[ ]`, append anything this session
->   queued but didn't capture, prune `[x]`/`[-]` lines older than 7 days
->   (their history lives in git).
-> - Not for block status (ROADMAP spine) or hardware facts (`docs/DEVICE.md`).
->   One concept, one home.
-> - IDs increment forever (L-1, L-2, …); never reuse a number.
+>   in place from `[ ]` to `[x]` (done — append `→ DONE <date>: <one line>`)
+>   or `[-]` (dropped — append the reason).
+> - Don't delete or strike an open item you don't recognise — it may belong
+>   to a concurrent session running in this same checkout.
+> - `/end` reconciles: disposition every `[ ]` you touched, append anything
+>   this session queued but didn't capture, prune `[x]`/`[-]` lines older
+>   than `prune_closed_after_days` (history lives in git), report the open
+>   count against `open_soft_max` and list items older than `stale_after_days`
+>   as route-or-close.
+> - **IDs are permanent and never reused.** Single-track: `L-1, L-2, …`.
+>   **Multi-track** (tracks declared in `protocol.json`): each track mints with
+>   its own prefix and its own counter — `D-1, D-2, …` and `M-1, M-2, …` — so
+>   two sessions can append at once without colliding. The prefix says who
+>   WROTE it. A tag right after the ID says who ACTS on it: `→mobile`,
+>   `→desktop`, or `→all` (`D-2 →mobile (2026-09-08) …`; also accepted after
+>   the date); no tag = the writer's own track. Legacy `L-` items keep their
+>   numbers forever and were tagged once at migration. If a collision ever
+>   lands anyway, renumber the
+>   later-referenced item and keep the alias in the surviving line.
 
-<!-- Items start here. Example shapes:
-- [ ] L-1 (YYYY-MM-DD) Confirm the fan restarts from a full stop (queued for the first on-device fan session)
-- [x] L-1 (YYYY-MM-DD) Confirm the fan restarts … → DONE YYYY-MM-DD: restarts at pwm 40 from 0, verified 3×
-- [-] L-2 (YYYY-MM-DD) Log fan RPM → dropped YYYY-MM-DD: hwmon has no fan1_input, RPM is not readable on this unit
--->
-
+<!-- Items start here. Shape: `- [ ] L-N (YYYY-MM-DD) <loop, done-condition>`; closed: `[x] … → DONE <date>: <one line>` or `[-] … → dropped <date>: <reason>`. No example items in this comment: the start hook counts every line that begins with "- [" as an item, comments included. -->
 - [x] L-1 (2026-09-05) Rebase `odin3-tuning` onto `upstream/main` — 3 commits behind after the user's OTA to `20260904.14230df`; user-approved action at a quiet point (D-2), suggested before B1 work starts. → DONE 2026-09-05: rebased 33e0319→14230df, 5 commits replayed, no conflicts, force-with-lease pushed; `main` fast-forwarded and pushed. User then delegated future rebases (D-2 amended).
 - [x] L-2 (2026-09-05) B0 gate: open a fresh session after the first `/end` and confirm the SessionStart hook injects state, reports origin currency, and reports the upstream drift count. → DONE 2026-09-06: fresh session injected CURRENT_STATE, reported origin current and 14 upstream commits, branch guard silent. B0 closed.
 - [ ] L-3 (2026-09-05) User: warranty / RMA check with AYN about the ~9 kHz fan tone BEFORE any physical fan work (gates the B2 hardware track).
@@ -40,7 +55,8 @@
 - [x] L-10 (2026-09-06) User: in Steam (Gaming Mode → Settings → Storage) confirm the reformatted SD card appears and pick where new installs go (internal `sda20` is the fast one; the card is bulk space). → DONE 2026-09-06: user saw the card, formatted it again from Steam's button (label `SD`), mounted at `/run/media/armada/SD`.
 - [x] L-11 (2026-09-06) `docs/DEVICE.md` "UI-owned state as last pulled" is from the SD-card install; the internal deployment started from image defaults (`gpu_max` 0.80 etc. are gone). Re-pull `device-state/` at the next pause and have the user redo the Power-tab tweaks they want. → DONE 2026-09-06 14:48: re-pulled, byte-identical to the record only because the user had already set `gpu_max = 0.80` again by hand at 14:24 — the fresh deployment had reset the Power tab to factory (user confirmed). Nothing left to redo; the lesson stands: installer runs and reflashes lose UI tweaks.
 - [x] L-12 (2026-09-06) Steam's Storage page lists the internal UFS chip ("MT512GAYAZ4U31, 464.5 free of 464.5") as an empty drive next to the SD card — udisks reports it `HintSystem=true`, non-removable, but Android's 17 filesystem-less partitions make Steam treat the disk as formattable. Harmless: Armada's `format-device.sh` only accepts `/dev/mmcblk*` and refuses system disks. Candidate first `device-overlay/` drop-in: a udev rule setting `UDISKS_IGNORE=1` on the internal UFS (`sda`) so Steam stops listing it — and a possible upstream PR, since every Odin 3 internal install will show this. Measure first (B7 cosmetics), don't tack it on. → applied 2026-09-06 14:50 on the user's go: overlay v1 pushed, udev DB has `UDISKS_IGNORE=1` on `sda`–`sdh` and their partitions, udisks `HintIgnore=true`, SD card untouched. Close when the user confirms Steam's Storage page no longer lists the chip (Steam may need a restart). → DONE 2026-09-06: user restarted Steam and the internal chip is gone from Settings → Storage. Overlay v1 does the job; upstream-PR candidate stands (B9).
-- [ ] L-13 (2026-09-07) B4 sleep checks queued from the issue-tracker survey: (a) is Bluetooth still `Powered: yes` across s2idle on this unit — upstream #264 rfkill fix exists only in the fake-suspend path and is commented out there (b92c959); if yes, overlay candidate = `/etc/systemd/system-sleep/` rfkill hook, then measure %/h with BT on vs blocked; (b) `armada-sleep-debug prepare` → `rtcwake -m freeze -s 30` → `collect`: do `qcom_stats` aosd/cxsd tick on SM8750 (upstream #274 found they never do on SM8550; USB PHY vote + SD IRQ storm); (c) user: does the left side of the screen get warm in sleep (#265, reproduced on Odin 3 Max).
+- [ ] L-13 (2026-09-07) B4 sleep checks — plan and rationale in ROADMAP → B4 "Plan (2026-09-07, L-13)": (a) Bluetooth `Powered` state across s2idle on this unit (upstream #264); (b) `qcom_stats` aosd/cxsd tick on SM8750 via `armada-sleep-debug` + `rtcwake` (#274); (c) user: left side of the screen warm in sleep (#265). Done when all three are measured on this unit and recorded in B4. (Shortened 2026-09-11 at the protocol migration; the analysis moved to ROADMAP.)
 - [x] L-14 (2026-09-07) Goal refinement from the user (battery first; 60 fps light / 30 fps modern; 2–3 retuned profiles): reword the B3 and B4 gates in ROADMAP.md accordingly on the user's go, and treat the gamescope frame-limiter undershoot/perf-drop (upstream #45, #276, #322 — reproduced on Odin 3 Max, no fix landed) as a B3 blocker: test in-game limiter / DXVK_FRAME_RATE env / gpu_min floor as workarounds. → DONE 2026-09-07: ROADMAP intro (owner's target) + B3/B4 spine gates and block sections reworded on the user's go ("agreed with all").
 - [ ] L-15 (2026-09-07) B4: the battery exposes `charge_control_start_threshold` / `charge_control_end_threshold` (seen 2026-09-07 in `/sys/class/power_supply/battery/`) — the 80 % charge-limit knob upstream #363 asks for. Read the current values, test whether a write sticks and whether the PMIC honours it (charge to the cap, stop), then decide overlay (udev/tmpfiles) vs B9 PR. Also seen: `time_to_empty_avg`, `charge_counter`, `charge_full` — candidates for the B1 logger v2.
 - [ ] L-16 (2026-09-07) B3: `gpu_max` is a ratio of the 1100 MHz devfreq table top, not the 832 MHz cap (`armada-powerd` `choose_at_most(freqs, int(freqs[-1]*gpu_max))`) — the user's Balanced 0.80 and Eco's factory 0.80 are no-ops (run 1: Eco at 832 MHz 78 % of the time). B3: test a real cap (0.60 → 660 MHz) as its own variable, via the Power tab (UI-owned, D-4). B9: issue or PR — ratio against the usable max, or show the resulting MHz in the UI.
+- [ ] L-17 (2026-09-11) Protocol migration gate: in the next fresh session confirm the template SessionStart hook injects CURRENT_STATE + open ledger + spine + handoff lines with no template-drift note, the statusline shows the phase, and `/end` runs `tools/check-delta.sh` + the secret scan. Done when one full start→`/end` cycle passes on the global layer.

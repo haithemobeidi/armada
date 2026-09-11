@@ -10,7 +10,7 @@
 
 **Finish B1:** (a) the **30-min idle recording** — Steam home screen, unplugged, screen on; `tools/baseline-logger.sh` is already on the device at `/var/tmp/armada-baseline/` (start it with `odin.py run`, pull with `odin.py get`); (b) the **pitch-vs-PWM sweep** with the user listening — declare pause-points first, daemon paused, temperature watchdog, PWM 0 → 255 in steps of 8, the user calls pitch/loudness per step (this is the test that splits physical from curve; see ROADMAP B1 run 2 notes); then write the B1 summary and close the block. Ask the user for the **in-game frame cap value** used in runs 1–2 (never confirmed).
 
-**Current block:** B1 — Baseline instrumentation
+**Current phase:** B1 Baseline instrumentation — idle recording + pitch-vs-PWM sweep pending (the statusline parses this line)
 
 **Build status:** working (`tools/odin.py` gained `put`/`get`, UTF-8 console, POSIX remote-path guard; `tools/baseline-logger.sh` v2 shellcheck-clean and smoke-tested on the device; `/end` guards all passed)
 

@@ -1,116 +1,96 @@
 #!/usr/bin/env python3
 """
-SessionStart hook: replaces the manual `/start` typing.
+SessionStart hook: loads the session context so the user never types /start.
 
-Runs the branch guard, then the two-remote sync guard, then injects
-CURRENT_STATE.md + the open SESSION_LEDGER items + the ROADMAP spine +
-the last 5 HANDOFF_LOG.md lines into the first turn so Claude can give
-the status report without the user typing /start.
+Order of operations (each one exists because skipping it once cost real time):
 
-This repo is a FORK with an active upstream, which changes two things
-versus the template this script came from:
+1. Worktree guard — refuse to work from a `.claude/worktrees/` checkout or a
+   `claude/*` branch.
+2. Global-install check — the rules that govern every project live in the
+   Knowledge Base and are imported from `~/.claude/CLAUDE.md`. If that import
+   is missing on this machine, say so loudly: the session would otherwise run
+   with only the project file and no process.
+3. Sync guard — `git fetch` and refuse to inject state docs from a checkout
+   that is behind origin. Stale docs are self-consistent, so nothing
+   downstream can catch them.
+4. Inject: declared tracks (if any), CURRENT_STATE.md, the OPEN ledger items
+   (each truncated to the configured cap, grouped by track), the ROADMAP
+   status spine (with a warning for bloated cells), the last handoff lines
+   (plus the last line per track), a template-drift note, and the mandatory
+   cross-check / track-gate directive.
 
-  1. Branch guard.  Work happens on WORK_BRANCH (odin3-tuning).  `main`
-     mirrors upstream/main and must never receive commits, so landing on
-     `main` trips the guard the same way a worktree does.
+All project-specific values come from `.claude/protocol.json` via
+protocol_config.py — never edit this script per project.
 
-  2. Two remotes.  `origin` is the fork (our pushes; the laptop/desktop
-     sync path).  `upstream` is armada-os/armada (read-only; several
-     merges a day).  Both are fetched.  Being behind ORIGIN blocks doc
-     injection (stale snapshot).  Being behind UPSTREAM is reported as a
-     number so the session can decide whether to rebase — never acted on
-     automatically.
-
-Output protocol: print a JSON object to stdout with the shape
-  {"hookSpecificOutput": {"hookEventName": "SessionStart",
-                          "additionalContext": "<text to inject>"}}
-
-The script is silent on every failure path — if anything goes wrong we
-exit 0 with no output rather than blocking session start.
+Silent on every failure path: exits 0 with no output rather than blocking a
+session. A directory with neither protocol.json nor docs/CURRENT_STATE.md is
+not a protocol project and gets nothing.
 """
 
+from __future__ import annotations
+
+import datetime as _dt
 import json
-import os
 import pathlib
+import re
 import subprocess
 import sys
 
-WORK_BRANCH = "odin3-tuning"
-UPSTREAM_REF = "upstream/main"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from protocol_config import (  # noqa: E402
+    drift_report,
+    global_installed,
+    load_config,
+    multi_track,
+    prefix_map,
+    project_dir,
+    template_root,
+    track_aliases,
+    track_names,
+)
+
+ITEM_RE = re.compile(
+    r"^- \[( |x|-)\] ([A-Za-z]{1,4})-(\d+)\s*(?:(?:→|->)\s*[\w-]+\s*)?\((\d{4}-\d{2}-\d{2})"
+)
 
 
 def run(cmd: list[str], cwd: str, timeout: int = 5) -> tuple[int, str]:
     try:
-        result = subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout
-        )
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
         return result.returncode, result.stdout.strip()
     except (subprocess.SubprocessError, OSError):
         return 1, ""
 
 
-def remote_state(project_dir: str) -> tuple[int, int, bool, bool]:
-    """Fetch origin and report how this checkout stands against its upstream
-    tracking branch.  Returns (behind, ahead, dirty, fetch_ok).
+def emit(text: str) -> None:
+    payload = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}
+    sys.stdout.write(json.dumps(payload))
+    sys.exit(0)
 
-    Why this must happen BEFORE the docs are read: every file this hook
-    injects is a tracked repo file.  Reading them from a checkout that is
-    behind origin loads a snapshot of the past that looks complete and
-    self-consistent, so nothing downstream can detect it — the /start
-    cross-check only tests whether the docs agree with EACH OTHER, and
-    stale docs agree perfectly.
 
-    This hook deliberately does NOT pull.  It detects and refuses to inject
-    stale docs; the session does the pull where it is visible.
-    """
-    fetch_rc, _ = run(["git", "fetch", "origin", "--prune"], project_dir, timeout=20)
-    fetch_ok = fetch_rc == 0
+# --- Remote currency ---------------------------------------------------------
 
-    rc, counts = run(
-        ["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"], project_dir
-    )
+def remote_state(proj: str) -> tuple[int, int, bool, bool]:
+    """(behind, ahead, dirty, fetch_ok). Fetches; never pulls — a dirty or
+    diverged tree needs a human decision, and post-merge hooks can run installs."""
+    fetch_rc, _ = run(["git", "fetch", "origin", "--prune"], proj, timeout=20)
+    rc, counts = run(["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"], proj)
     behind = ahead = 0
     if rc == 0 and counts:
         try:
-            ahead_s, behind_s = counts.split()
-            ahead, behind = int(ahead_s), int(behind_s)
+            a, b = counts.split()
+            ahead, behind = int(a), int(b)
         except ValueError:
             pass
-
-    rc, porcelain = run(["git", "status", "--porcelain"], project_dir)
-    dirty = rc == 0 and bool(porcelain)
-
-    return behind, ahead, dirty, fetch_ok
+    rc, porcelain = run(["git", "status", "--porcelain"], proj)
+    return behind, ahead, rc == 0 and bool(porcelain), fetch_rc == 0
 
 
-def upstream_state(project_dir: str) -> tuple[int, str, bool]:
-    """Fetch upstream and count commits on upstream/main not in HEAD.
-    Returns (behind_upstream, latest_upstream_subject, fetch_ok).
+# --- Ledger ------------------------------------------------------------------
 
-    Reported, never acted on: rebasing rewrites the tuning branch and
-    needs a force-with-lease push, which is a human decision made at a
-    quiet point in the session — not something a hook does at startup.
-    """
-    fetch_rc, _ = run(["git", "fetch", "upstream", "--prune"], project_dir, timeout=20)
-    fetch_ok = fetch_rc == 0
-    rc, count = run(
-        ["git", "rev-list", "--count", f"HEAD..{UPSTREAM_REF}"], project_dir
-    )
-    behind = int(count) if rc == 0 and count.isdigit() else 0
-    _, latest = run(
-        ["git", "log", "-1", "--format=%h %s (%cr)", UPSTREAM_REF], project_dir
-    )
-    return behind, latest, fetch_ok
-
-
-def open_ledger_view(text: str) -> tuple[str, int, int]:
-    """Return the ledger header + ONLY the open `[ ]` item blocks.
-    Returns (filtered_text, open_count, closed_count).
-
-    Closed items ([x]/[-]) keep their full pre-closure text struck through,
-    so a single closed line can run hundreds of words.  They are history,
-    not context, and are deliberately never injected.
-    """
+def ledger_blocks(text: str) -> tuple[list[str], list[list[str]]]:
+    """Split the ledger into (header lines, item blocks). A block is the ID line
+    plus its non-blank continuation lines."""
     header: list[str] = []
     blocks: list[list[str]] = []
     current: list[str] | None = None
@@ -125,194 +105,386 @@ def open_ledger_view(text: str) -> tuple[str, int, int]:
             header.append(ln)
         elif s and current is not None:
             current.append(ln)
+    return header, blocks
+
+
+def item_tag(first_line: str, aliases: dict[str, str]) -> str | None:
+    """A →track / →all tag on the ID line, only for declared names or aliases.
+
+    Two positions count, and nothing else does (an arrow inside the item's
+    prose must not re-route it):
+      1. right after the ID:            `- [ ] L-423 →mobile (2026-08-29, …)`   (canonical)
+      2. right after the date paren:    `- [ ] D-2 (2026-09-08) →mobile …`
+    Legacy ledgers can have very long date parentheses, so position 2 is found
+    from the first ')' rather than a fixed prefix."""
+    alts = "|".join(re.escape(a) for a in list(aliases) + ["all"])
+    s = first_line.lstrip()
+    m = re.match(r"- \[.\] [A-Za-z]{1,4}-\d+\s*(?:→|->)\s*(" + alts + r")\b", s, re.IGNORECASE)
+    if not m:
+        close = s.find(")")
+        if close >= 0:
+            m = re.match(r"\)\s*(?:→|->)\s*(" + alts + r")\b", s[close:], re.IGNORECASE)
+    if not m:
+        return None
+    hit = m.group(1).lower()
+    return "all" if hit == "all" else aliases.get(hit)
+
+
+def truncate(block_text: str, cap: int) -> tuple[str, bool]:
+    if len(block_text) <= cap:
+        return block_text, False
+    cut = block_text[:cap].rstrip()
+    extra = len(block_text) - len(cut)
+    return f"{cut} …[TRUNCATED at {cap} chars — {extra} more in docs/SESSION_LEDGER.md; the item is over the cap and should be shortened]", True
+
+
+def open_ledger_view(text: str, cfg: dict) -> dict:
+    header, blocks = ledger_blocks(text)
+    cap = int(cfg["ledger"]["item_max_chars"])
+    stale_days = int(cfg["ledger"]["stale_after_days"])
+    today = _dt.date.today()
+    names = track_names(cfg)
+    aliases = track_aliases(cfg)
+    pmap = prefix_map(cfg)
     open_blocks = [b for b in blocks if b[0].lstrip().startswith("- [ ]")]
-    body = "\n".join("\n".join(b) for b in open_blocks)
-    filtered = "\n".join(header).rstrip() + "\n\n" + body
-    return filtered, len(open_blocks), len(blocks) - len(open_blocks)
+    closed = len(blocks) - len(open_blocks)
 
+    groups: dict[str, list[str]] = {}
+    order: list[str] = []
+    stale: list[str] = []
+    truncated = 0
+    for b in open_blocks:
+        first = b[0]
+        m = ITEM_RE.match(first.lstrip())
+        item_id = f"{m.group(2)}-{m.group(3)}" if m else "?"
+        if m:
+            try:
+                d = _dt.date.fromisoformat(m.group(4))
+                if (today - d).days > stale_days:
+                    stale.append(item_id)
+            except ValueError:
+                pass
+        text_block, was_cut = truncate("\n".join(b), cap)
+        truncated += int(was_cut)
+        if multi_track(cfg):
+            writer = pmap.get(m.group(2).upper()) if m else None
+            tag = item_tag(first, aliases)
+            if tag == "all":
+                key = "SHARED (→all)"
+            elif tag:
+                key = tag.upper()
+            elif writer:
+                key = writer.upper()
+            else:
+                key = "UNASSIGNED (legacy L-* / no tag)"
+            if tag and writer and writer != tag:
+                text_block = text_block.replace(first, first + f"   ⟵ from {writer}, for {tag}", 1)
+        else:
+            key = "OPEN"
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(text_block)
 
-def emit(text: str) -> None:
-    payload = {
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": text,
-        }
+    # Stable group order: tracks in declared order, then shared, then unassigned.
+    if multi_track(cfg):
+        wanted = [n.upper() for n in names] + ["SHARED (→all)", "UNASSIGNED (legacy L-* / no tag)"]
+        order = [k for k in wanted if k in groups] + [k for k in order if k not in wanted]
+
+    parts = ["\n".join(header).rstrip()]
+    for key in order:
+        parts.append(f"\n#### {key} — {len(groups[key])} open\n" + "\n".join(groups[key]))
+    return {
+        "text": "\n".join(parts),
+        "open": len(open_blocks),
+        "closed": closed,
+        "truncated": truncated,
+        "stale": stale,
     }
-    sys.stdout.write(json.dumps(payload))
-    sys.exit(0)
 
+
+# --- Spine -------------------------------------------------------------------
+
+def spine_view(roadmap_text: str, heading: str) -> tuple[str, list[str]]:
+    lines = roadmap_text.splitlines()
+    spine: list[str] = []
+    capturing = False
+    for ln in lines:
+        if not capturing and heading.lower() in ln.lower() and ln.startswith("#"):
+            capturing = True
+        elif capturing and ln.startswith("## "):
+            break
+        if capturing:
+            spine.append(ln)
+    bloated: list[str] = []
+    for ln in spine:
+        if ln.startswith("|"):
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if len(cells) >= 3 and len(cells[-1]) > 1500:
+                bloated.append(f"{cells[1][:40]} ({len(cells[-1])} chars)")
+    return "\n".join(spine).rstrip(), bloated
+
+
+# --- Main --------------------------------------------------------------------
 
 def main() -> None:
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
-    if not project_dir or not pathlib.Path(project_dir).is_dir():
+    proj = project_dir()
+    if not proj or not pathlib.Path(proj).is_dir():
         sys.exit(0)
+    cfg, cfg_exists = load_config(proj)
+    state_path = pathlib.Path(proj) / "docs" / "CURRENT_STATE.md"
+    if not cfg_exists and not state_path.exists():
+        sys.exit(0)  # not a protocol project
 
-    # Branch guard — mirrors Step 0 of /start.
-    cwd_norm = project_dir.replace("\\", "/")
-    in_worktree = ".claude/worktrees/" in cwd_norm
-    rc, branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], project_dir)
-    on_claude_branch = rc == 0 and branch.startswith("claude/")
-    on_main = rc == 0 and branch == "main"
-
-    if in_worktree or on_claude_branch or on_main:
-        why = (
-            "`main` mirrors upstream/main and must never receive commits"
-            if on_main
-            else "worktrees / `claude/*` branches are forbidden in this project"
-        )
+    # 1. Worktree guard — mirrors /start Step 0 so the warning is identical.
+    cwd_norm = proj.replace("\\", "/")
+    rc, branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], proj)
+    if ".claude/worktrees/" in cwd_norm or (rc == 0 and branch.startswith("claude/")):
         emit(
-            "⚠️ **Branch guard tripped at session start.** "
-            f"cwd `{project_dir}` on branch `{branch or '(unknown)'}` — {why}. "
-            f"Expected branch: `{WORK_BRANCH}`. Tell the user verbatim from "
-            "`.claude/commands/start.md` Step 0 and DO NOT proceed with reading state, "
+            "⚠️ **Worktree guard tripped at session start.** "
+            f"cwd `{proj}` on branch `{branch or '(unknown)'}` violates the workflow. "
+            "Tell the user verbatim from `/start` Step 0 and DO NOT proceed with reading state, "
             "editing files, or running other commands until they resolve it."
         )
 
-    # Sync guard (origin) — mirrors Step 0.5 of /start.
-    behind, ahead, dirty, fetch_ok = remote_state(project_dir)
+    # 2. Global install check.
+    global_ok = global_installed()
+    global_note = (
+        ""
+        if global_ok
+        else "🚨 **GLOBAL RULES NOT INSTALLED ON THIS MACHINE.** `~/.claude/CLAUDE.md` does not import "
+        "`claude-project-template/global/PROTOCOL.md`, so this session has the project file but NO "
+        "work-style rules and NO session protocol. Before any work: locate the Knowledge Base clone "
+        "on this machine (`git remote -v` → github.com/haithemobeidi/knowledge-base; usually under "
+        "~/Documents), run `python \"<KB>/claude-project-template/install-global.py\"`, then restart "
+        "the session. Tell the user this first.\n"
+    )
+    cfg_note = (
+        ""
+        if cfg_exists
+        else "⚠️ `.claude/protocol.json` is missing — running with template defaults (single track, no "
+        "check command, push policy = ask). Copy it from the template's `project/.claude/` and fill it in.\n"
+    )
 
+    # 3. Sync guard.
+    behind, ahead, dirty, fetch_ok = remote_state(proj)
     if behind > 0:
-        _, incoming = run(
-            ["git", "log", "--oneline", "--no-decorate", "-15", "HEAD..@{u}"],
-            project_dir,
-        )
+        _, incoming = run(["git", "log", "--oneline", "--no-decorate", "-15", "HEAD..@{u}"], proj)
         if ahead > 0:
             resolution = (
-                f"The branch has DIVERGED from origin ({ahead} ahead, {behind} behind). "
-                "**Do NOT auto-merge or rebase.** Surface this to the user and let them decide. "
-                "(Common cause: a rebase onto upstream was pushed from another machine.)"
+                f"The branch has DIVERGED ({ahead} ahead, {behind} behind). **Do NOT auto-merge or "
+                "rebase.** Surface this to the user and let them decide."
             )
         elif dirty:
             resolution = (
-                f"The tree is behind by {behind} AND has uncommitted changes. **Do NOT stash or "
-                "merge.** Surface both to the user and let them decide."
+                f"The tree is behind by {behind} AND has uncommitted changes. **Do NOT stash or merge.** "
+                "Surface both to the user and let them decide. (In a multi-track repo the dirty files may "
+                "be the other session's — say so, still do not pull over them without the user's call.)"
             )
         else:
             resolution = (
-                f"The tree is clean and strictly {behind} behind origin. Run `git pull --ff-only`, "
-                "then read `docs/CURRENT_STATE.md`, the OPEN `[ ]` lines of "
-                "`docs/SESSION_LEDGER.md`, the ROADMAP status spine, and the last 5 "
-                "`docs/HANDOFF_LOG.md` lines YOURSELF before reporting."
+                f"The tree is clean and strictly {behind} behind. Run `git pull --ff-only`, then read "
+                "`docs/CURRENT_STATE.md`, the OPEN `[ ]` lines of `docs/SESSION_LEDGER.md` (grep `- [ ]`; "
+                "closed lines are history), the ROADMAP status spine, and the last 5 `docs/HANDOFF_LOG.md` "
+                "lines YOURSELF before reporting."
             )
         emit(
-            "## ⚠️ Session context NOT auto-loaded — this checkout is behind origin\n\n"
-            f"`git fetch` found **{behind} commit(s) on origin/{branch} that are not here** "
-            "(commonly: the last session ran on another machine). The state docs were "
-            "deliberately NOT injected, because a stale snapshot reads as complete and "
-            "self-consistent.\n\n"
+            global_note
+            + "## ⚠️ Session context NOT auto-loaded — this checkout is behind origin\n\n"
+            f"`git fetch` found **{behind} commit(s) on the upstream branch that are not here** "
+            "(commonly: the last session ran on another machine). The state docs were deliberately NOT "
+            "injected: a stale snapshot reads as complete and self-consistent, and the cross-check only "
+            "compares the docs against EACH OTHER.\n\n"
             f"**Incoming commits:**\n```\n{incoming or '(unavailable)'}\n```\n\n"
             f"**Resolution:** {resolution}\n\n"
-            "Then give the normal status plus a sync line naming the pulled commit count. "
-            "Never report state read from a checkout you have not confirmed is current."
+            "Then give the normal status plus a sync line naming the pulled commit count. Never report "
+            "state read from a checkout you have not confirmed is current."
         )
 
-    # Upstream drift — reported, never acted on.
-    up_behind, up_latest, up_fetch_ok = upstream_state(project_dir)
-
-    sync_note = (
-        f"✅ Fetched origin — checkout is current on `{branch}`.\n"
+    # 4. Happy path — build the payload.
+    parts: list[str] = ["## Auto-loaded session context (SessionStart hook)\n", global_note, cfg_note]
+    parts.append(
+        "✅ Fetched origin — checkout is current.\n"
         if fetch_ok
-        else "⚠️ **Could not reach origin** — the docs below are from the local checkout and "
-        "their currency is UNVERIFIED, not confirmed. Say so in the status report.\n"
+        else "⚠️ **Could not reach origin** — the docs below are from the local checkout and their "
+        "currency is UNVERIFIED. Say so in the status report.\n"
     )
-    if not up_fetch_ok:
-        upstream_note = "⚠️ Could not fetch `upstream` — upstream drift is unknown this session.\n"
-    elif up_behind == 0:
-        upstream_note = f"✅ Tuning branch contains everything on `{UPSTREAM_REF}`.\n"
-    else:
-        upstream_note = (
-            f"📥 **`{UPSTREAM_REF}` has {up_behind} commit(s) not in this branch** "
-            f"(latest: {up_latest}). Rebasing is Claude's call at the first quiet point "
-            "(D-2: clean tree, not during start/end, --force-with-lease, always reported): "
-            "mention the count in the status report and plan the rebase — never do it as "
-            "part of session start.\n"
+
+    # Template drift (informational, one line).
+    tmpl = template_root()
+    if tmpl and tmpl.is_dir():
+        pdiff, gdiff = drift_report(proj, tmpl)
+        if pdiff or gdiff:
+            bits = []
+            if pdiff:
+                bits.append(f"{len(pdiff)} project file(s) differ from the template ({', '.join(pdiff)})")
+            if gdiff:
+                bits.append(f"global copies stale ({', '.join(gdiff)}) → rerun install-global.py")
+            parts.append(
+                "🔄 **Template drift:** " + "; ".join(bits)
+                + ". Run `python .claude/scripts/check-template-drift.py` for details. Mention it in the "
+                "status report; resync only when the user says so.\n"
+            )
+
+    # Tracks.
+    if multi_track(cfg):
+        rows = []
+        for t in cfg["tracks"]:
+            owns = ", ".join(f"`{p}`" for p in t["owns"]) or "(no owned paths declared)"
+            rows.append(f"- **{t['name']}** — IDs `{t['prefix']}-N` — owns {owns}")
+        shared = ", ".join(f"`{p}`" for p in cfg["shared_paths"]) or "(none declared)"
+        parts.append(
+            "\n### 🛤️ Parallel tracks declared in `.claude/protocol.json`\n"
+            + "\n".join(rows)
+            + f"\n- **shared** (any track, announce changes with a →all / →<track> ledger line): {shared}\n"
         )
 
-    parts: list[str] = [
-        "## Auto-loaded session context (SessionStart hook)\n",
-        sync_note,
-        upstream_note,
-    ]
-
-    state_path = pathlib.Path(project_dir) / "docs" / "CURRENT_STATE.md"
+    # CURRENT_STATE.
     if state_path.exists():
         try:
-            parts.append("\n### docs/CURRENT_STATE.md\n")
-            parts.append(state_path.read_text(encoding="utf-8").rstrip() + "\n")
+            parts.append("\n### docs/CURRENT_STATE.md\n" + state_path.read_text(encoding="utf-8").rstrip() + "\n")
         except OSError:
             pass
 
-    ledger_path = pathlib.Path(project_dir) / "docs" / "SESSION_LEDGER.md"
+    # Ledger — open items only, truncated, grouped.
+    ledger_path = pathlib.Path(proj) / "docs" / "SESSION_LEDGER.md"
+    ledger_info = None
     if ledger_path.exists():
         try:
-            filtered, n_open, n_closed = open_ledger_view(
-                ledger_path.read_text(encoding="utf-8")
-            )
+            ledger_info = open_ledger_view(ledger_path.read_text(encoding="utf-8"), cfg)
+            cap = cfg["ledger"]["item_max_chars"]
+            soft = cfg["ledger"]["open_soft_max"]
+            extras = []
+            if ledger_info["truncated"]:
+                extras.append(f"{ledger_info['truncated']} item(s) over the {cap}-char cap were truncated")
+            if ledger_info["open"] > soft:
+                extras.append(f"{ledger_info['open']} open > soft target {soft} — offer a triage pass")
+            if ledger_info["stale"]:
+                extras.append(
+                    f"{len(ledger_info['stale'])} older than {cfg['ledger']['stale_after_days']} days: "
+                    + ", ".join(ledger_info["stale"][:12])
+                    + (" …" if len(ledger_info["stale"]) > 12 else "")
+                )
             parts.append(
-                f"\n### docs/SESSION_LEDGER.md — OPEN items only ({n_open} open; "
-                f"{n_closed} closed line(s) omitted — closed items are history, "
-                "read the file only if one is explicitly needed)\n"
+                f"\n### docs/SESSION_LEDGER.md — OPEN items only ({ledger_info['open']} open; "
+                f"{ledger_info['closed']} closed line(s) omitted — closed items are history)\n"
+                + ("⚠️ " + "; ".join(extras) + "\n" if extras else "")
+                + ledger_info["text"].rstrip()
+                + "\n"
             )
-            parts.append(filtered.rstrip() + "\n")
         except OSError:
             pass
 
-    roadmap_path = pathlib.Path(project_dir) / "ROADMAP.md"
+    # Spine.
+    roadmap_path = pathlib.Path(proj) / "ROADMAP.md"
     if roadmap_path.exists():
         try:
-            rlines = roadmap_path.read_text(encoding="utf-8").splitlines()
-            spine: list[str] = []
-            capturing = False
-            for ln in rlines:
-                if "status at a glance" in ln.lower():
-                    capturing = True
-                elif capturing and ln.startswith("## "):
-                    break
-                if capturing:
-                    spine.append(ln)
+            spine, bloated = spine_view(roadmap_path.read_text(encoding="utf-8"), cfg["spine_heading"])
             if spine:
-                parts.append(
-                    "\n### ROADMAP.md — status-at-a-glance spine (SOURCE OF TRUTH for block status)\n"
+                warn = (
+                    "⚠️ Spine cell(s) over 1,500 chars — history belongs in HANDOFF_LOG, not the cell: "
+                    + "; ".join(bloated)
+                    + "\n"
+                    if bloated
+                    else ""
                 )
-                parts.append("\n".join(spine).rstrip() + "\n")
+                parts.append(
+                    "\n### ROADMAP.md — status spine (SOURCE OF TRUTH for phase/block status)\n" + warn + spine + "\n"
+                )
         except OSError:
             pass
 
-    handoff_path = pathlib.Path(project_dir) / "docs" / "HANDOFF_LOG.md"
+    # Handoff — last 5 overall, plus the last line per track.
+    handoff_path = pathlib.Path(proj) / "docs" / "HANDOFF_LOG.md"
     if handoff_path.exists():
         try:
-            lines = handoff_path.read_text(encoding="utf-8").splitlines()
-            entries = [ln for ln in lines if "|" in ln and not ln.startswith("**")][-5:]
+            entries = [ln for ln in handoff_path.read_text(encoding="utf-8").splitlines() if "|" in ln]
             if entries:
-                parts.append("\n### Last 5 lines of docs/HANDOFF_LOG.md\n")
-                parts.append("\n".join(entries) + "\n")
+                parts.append("\n### Last 5 lines of docs/HANDOFF_LOG.md\n" + "\n".join(entries[-5:]) + "\n")
+                if multi_track(cfg):
+                    per: list[str] = []
+                    for name in track_names(cfg):
+                        last = None
+                        for ln in reversed(entries):
+                            fields = [f.strip() for f in ln.split("|")]
+                            if len(fields) >= 3 and fields[1].lower() == name.lower():
+                                last = ln
+                                break
+                        if last is None:
+                            # Legacy lines (before the track field existed) name the track in
+                            # free text, e.g. "(120th, desktop)" or "Android (86th)". Match the
+                            # track name or any declared alias so the first post-migration
+                            # cross-check has something to check against.
+                            # Only the AREA field counts, and only where the name is used as a
+                            # label — followed by "(", ",", ";", ")", "track", or the end —
+                            # so "(120th, desktop; Android session concurrent)" matches desktop,
+                            # not mobile.
+                            words = [a for a, n in track_aliases(cfg).items() if n == name]
+                            pat = (
+                                r"(?:^|[\s(,;/])(?:" + "|".join(re.escape(w) for w in words)
+                                + r")(?=\s*(?:\(|,|;|\)|track\b|$))"
+                            )
+                            for ln in reversed(entries):
+                                fields = [f.strip() for f in ln.split("|")]
+                                area = fields[1] if len(fields) >= 3 else ln
+                                if re.search(pat, area, re.IGNORECASE):
+                                    last = ln + "   ⟵ matched by text (legacy line, no track field)"
+                                    break
+                        per.append(f"- **{name}:** {last or '(no handoff line yet for this track)'}")
+                    parts.append("\n### Last handoff line PER TRACK (cross-check against YOUR track's line)\n" + "\n".join(per) + "\n")
         except OSError:
             pass
 
-    parts.append(
-        "\n---\n"
-        "**Action requested — session start.** The hook fetched origin AND upstream, ran the "
-        "branch guard, and auto-loaded CURRENT_STATE.md, the SESSION_LEDGER's open items "
-        "(closed lines omitted by design — never read them at start), the ROADMAP status "
-        "spine, and the last HANDOFF lines. Now:\n"
-        "1. **CROSS-CHECK (mandatory).** Does CURRENT_STATE's '📍 NEXT ACTION' agree with the "
-        "ROADMAP spine's ⬅ CURRENT block AND the last HANDOFF line's 'Next:', AND does no open "
-        "`[ ]` ledger gate contradict it? **If they contradict, STOP and surface the "
-        "contradiction to the user — do NOT pick one and proceed.**\n"
-        "2. If they agree, give the status report: where we are (block **name + number** from "
-        "the spine) / what last session accomplished / the single **NEXT ACTION** / open ledger "
-        "items (count + gates) / a **sync line** stating origin currency explicitly AND the "
-        "upstream drift count. Never let currency be assumed.\n"
-        "3. **Device line.** If `docs/DEVICE.md` says an overlay is applied on the handheld, "
-        "state which overlay version the device is believed to be running. Do not SSH at start "
-        "unless the NEXT ACTION needs it.\n"
-        "During the session, follow the ledger's moment-of-event rule: queue and strike items "
-        "THE MOMENT they arise or resolve — never wait for /end. Trust but verify — "
-        "CURRENT_STATE is hand-written and CAN be stale; the ROADMAP spine wins on any "
-        "block-status disagreement. Block numbers are frozen (never renumber). Don't run "
-        "`/start` (this hook covered it)."
+    # Directive.
+    audit = cfg.get("audit_command") or ""
+    audit_line = (
+        f"Run the project audit `{audit}` and mention it ONLY if it reports findings. " if audit else ""
     )
-
+    if multi_track(cfg):
+        names = " / ".join(track_names(cfg))
+        gate = (
+            f"0. **TRACK GATE (before anything else).** This repo runs parallel tracks ({names}). If the "
+            "user's first message names the track this session is on, adopt it. Otherwise ASK which track "
+            "and WAIT — do not read, edit, or report until you know. Everything below is scoped to YOUR "
+            "track: your NEXT ACTION section, your ledger prefix, your last handoff line, your owned paths.\n"
+        )
+        crosscheck = (
+            "1. **CROSS-CHECK (mandatory).** Does YOUR track's NEXT ACTION in CURRENT_STATE agree with the "
+            "spine's CURRENT marker for your track, with your track's last HANDOFF line's 'Next:', and with "
+            "no open gate tagged for your track or →all? **If they contradict, STOP and surface it — do not "
+            "pick one and proceed.**\n"
+            "2. If they agree, report: **Track:** <name> / where we are (name + number from the spine) / what "
+            "your track's last session did / your single NEXT ACTION / open ledger items (yours + →all + "
+            "unassigned, with gates) / a **sync line** stating currency explicitly.\n"
+            "3. Standing rules for this session: edit only your owned paths and the shared paths; never "
+            "touch the other track's owned paths or its ledger lines; stage explicit paths (never `git add "
+            "-A`); the other track's uncommitted files in the tree are THEIRS — leave them and say so at "
+            "wrap; a push publishes the whole branch, so name any commits that are not yours.\n"
+        )
+    else:
+        gate = ""
+        crosscheck = (
+            "1. **CROSS-CHECK (mandatory).** Does CURRENT_STATE's NEXT ACTION agree with the spine's CURRENT "
+            "phase/block AND the last HANDOFF line's 'Next:', AND does no open `[ ]` ledger gate contradict "
+            "it? **If they contradict, STOP and surface the contradiction to the user — do NOT pick one and "
+            "proceed.**\n"
+            "2. If they agree, give a 4-line status: where we are (phase/block **name + number** from the "
+            "spine) / what last session accomplished / the single **NEXT ACTION** / open ledger items (count + "
+            "gates), plus a **sync line** stating currency explicitly (fetched-and-current, or "
+            "fetch-failed-so-unverified).\n"
+        )
+    parts.append(
+        "\n---\n**Action requested — session start.** The hook fetched origin and auto-loaded the state docs "
+        "above (closed ledger lines are omitted by design — never read them at start). Now:\n"
+        + gate
+        + crosscheck
+        + audit_line
+        + "During the session, follow the ledger's moment-of-event rule: queue and strike items THE MOMENT "
+        "they arise or resolve — never wait for /end — and keep each item under the cap. Trust but verify: "
+        "CURRENT_STATE is hand-written and CAN be stale; the spine wins on any status disagreement. Numbers "
+        "are frozen (never renumber). Don't re-read the docs above; don't run `/start` (this hook covered "
+        "it). Run git status/log only if the user asks or the cross-check needs it."
+    )
     emit("".join(parts))
 
 
