@@ -48,5 +48,6 @@ None. Device/repo parity: **overlay v2** applied 2026-09-11 14:23 = repo; `devic
 - **Test scripts live on the device in `/var/tmp/`** (`gamesleep10.sh`, `sleep10*.sh`, `bisect.sh`, …; DEVICE.md lists them). All detach with `nohup`, set an RTC alarm, and write `log.txt` in `/var/tmp/sleep-test-<ts>-<tag>/`; fetch after the alarm with `odin.py run cat`. `odin.py sudo` elevates only the first command of a compound string — use a script file. Script output via `odin.py run bash file` came back empty several times; `bash -x file 2>/dev/null` always worked.
 - **The % battery gauge lies above ~90 %** — use `charge_counter` deltas (µAh) for drain; consistent to ±1 mAh over 10 min.
 - **Calling `odin.py put`/`get` from Git Bash needs `MSYS_NO_PATHCONV=1`.**
+- **L-20: a power-key wake can be followed 1 s later by a fresh suspend** (seen 14:19 and 16:12); the user presses once more and it stays up. Overnight this is harmless (it goes back to sleep), but it confuses the morning reading — ask whether the wake needed two presses.
 - **Upstream #403** (Pocket Fit Elite, same SoC): native sleep sometimes never wakes — not seen here in 14 cycles, watch it.
 - In-game frame cap for the Sep 7 runs still unknown; `power_supply/battery/power_now` unverified; fresh deployments lose `/etc` and `/var` (re-push the overlay after any installer run).
