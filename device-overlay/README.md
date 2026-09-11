@@ -10,4 +10,6 @@ This tree mirrors the device's filesystem root: `device-overlay/etc/sysctl.d/90-
 4. **Nothing here touches the boot path** (kernel args, ABL, partitions). That is D-7 territory with its own block and its own go.
 5. When a file is pushed, `docs/DEVICE.md` → "What is applied on the handheld right now" names the commit; `/end` Step 1e checks it.
 
+**v2 (2026-09-11):** adds `etc/systemd/system-sleep/20-odin3-wifi-off-in-sleep` (rfkill Wi-Fi around suspend; 0.75 W → 0.47 W measured, ROADMAP B4). `odin.py push` installs shebang files as 0755 since this version; systemd-sleep ignores non-executable hooks.
+
 **v1 (2026-09-06):** `etc/udev/rules.d/99-armada-hide-internal-ufs.rules`. udev files need a reload after a push, which `odin.py push` does not do: `udevadm control --reload-rules && udevadm trigger -c change --subsystem-match=block --sysname-match='sd*'` (the bare `--subsystem-match=block` trigger returned 1 and skipped the UFS devices).

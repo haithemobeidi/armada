@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-09-11 (session 4 `/end` — protocol migrated to the global KB layer; no device work)
+**Last updated:** 2026-09-11 (session 5 wrap — rebase, idle CPU solved, fan-off curve, sleep measured + overlay v2)
 
 > This file carries only the **NEXT ACTION** + this-session deltas. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,13 +8,13 @@
 
 ## 📍 NEXT ACTION
 
-**Rebase first, then finish B1.** (1) `odin3-tuning` is 50+ commits behind `upstream/main` — rebase at the start of the session (clean tree, D-2), push `--force-with-lease`, report. (2) Then B1: (a) the **30-min idle recording** — Steam home screen, unplugged, screen on; `tools/baseline-logger.sh` is on the device at `/var/tmp/armada-baseline/` (start with `odin.py run`, pull with `odin.py get`); (b) the **pitch-vs-PWM sweep** with the user listening — declare pause-points first, daemon paused, temperature watchdog, PWM 0 → 255 in steps of 8, the user calls pitch/loudness per step (see ROADMAP B1 run 2 notes); then write the B1 summary and close the block. Ask the user for the **in-game frame cap value** used in runs 1–2 (never confirmed).
+**B4, sleep with a game open (1.65 W vs 0.47 W).** One 10-min sleep with the game **muted / its audio device closed** (user parks it in a menu, says ready; `/var/tmp/gamesleep10.sh` on the device does the cycle), then one with the GPU forced to its floor via the Power tab — one variable each, `charge_counter` deltas. Then: the **idle-to-sleep timeout** (awake idle is 2.1 W screen-on; Steam's setting), an **upstream issue** for SM8750 sleep depth with today's numbers (ROADMAP B4, `device-data/sleep-test-20260911-122117/`), and the L-18 fan sign-off by ear. Ask the user for last night's battery % before/after sleep (hook v2 live since 14:23). B1's idle recording + pitch sweep stay paused behind B4.
 
-**Current phase:** B1 Baseline instrumentation — idle recording + pitch-vs-PWM sweep pending (the statusline parses this line)
+**Current phase:** B4 Battery + sleep — game-sleep audio test, idle timeout, upstream issue (the statusline parses this line)
 
-**Build status:** working (`tools/check-delta.sh` OK on all 33 delta files; secret scan clean; template drift check up to date)
+**Build status:** working (`tools/check-delta.sh` OK on all 34 delta files)
 
-**Remote:** `origin/odin3-tuning` = HEAD after this `/end` push. Fork point = `upstream/main` = `04dbfc9` at the 2026-09-07 rebase. `main` = `origin/main` = `14230df` (mirror, untouched). Device image `20260906.41d2e10`. **Other machine after a rebase:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
+**Remote:** `origin/odin3-tuning` = HEAD after this wrap's push. Fork point = `upstream/main` = `a9a38ba` (rebased 2026-09-11, 25 commits replayed clean). `main` = `origin/main` = `14230df` (mirror, untouched). Device image `20260911.a9a38ba`. **Other machine after a rebase:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
 
 ---
 
@@ -26,27 +26,27 @@ Open: L-3 (user: AYN warranty check), L-4 (user: off-PC ABL backup copy), L-5 (d
 
 ## What happened this session
 
-- **Protocol migrated to the global Knowledge Base layer (D-10).** `PROTOCOL.md`, `docs/WORK_STYLE.md`, and the project `/start` + `/end` commands are gone; the global layer imported from `~/.claude/CLAUDE.md` took over. `CLAUDE.md` rewritten to the template outline (106 lines: fork model, device model, device-work rules, five explicit overrides). `.claude/protocol.json` carries the settings: `check_command = bash tools/check-delta.sh`, `push_policy = standing`, `protected_branches = ["main"]`, `upstream_ref = "upstream/main"`, generated-path skip list.
-- **`tools/check-delta.sh`** replaces the old `/end` build guard: Python syntax, `bash -n` + shellcheck, configparser on every overlay `.conf`, unindexed-delta warnings.
-- **Three template fixes upstreamed to the KB** (commit 9b5cc5e) and resynced here: `protected_branches` / `upstream_ref` for forks; the index queue written LF-only on Windows; the ledger reader skips the header's comment block (its example items used to be injected as open loops). Verified: guard trips on `main`, start hook reports upstream +50, statusline shows it.
-- Ledger header replaced with the template's; L-13 cut to the loop + a pointer (analysis already in ROADMAP B4); L-17 queued.
-- No device work. Nothing under `/etc` or `/var/tmp/armada-baseline/` touched.
-
----
+- **Rebase** `odin3-tuning` onto `upstream/main` `a9a38ba` (50 commits, none sleep-related), pushed `--force-with-lease`.
+- **Idle CPU (B5) solved:** the "30 % in the library" was Steam's performance overlay — 33 % / GPU 832 MHz with the FPS counter on, 3 % / 160 MHz off. Owner rule: overlay only in game.
+- **Fan-off at idle (B2):** the user's Relaxed curve never went below 51; set by direct edit on the user's ask to `0:0,50:0,51:51,65:51,76:77,82:102,88:153,98:255` + `min_pwm=0` (same path + reload the app uses; backups on the device). PWM 0 at 40–45 °C all afternoon. L-18 watch.
+- **Sleep (B4) measured, 14 cycles:** SoC never enters AOSD/CXSD/DDR low-power in s2idle *or* deep; CPU cluster does sleep; suspend/wake reliable (all wakes = RTC alarm or power key). 10-min watts: s2idle 0.75, deep 0.49, Wi-Fi off 0.47, deep+Wi-Fi off 0.47, game open 1.65. Bisection cleared Wi-Fi radio, Wi-Fi card, gamepad UART; PCIe RC can't unbind. History: upstream gave the Odin 3 deep sleep on 07-12 and switched everything to s2idle on 09-03 (the user's 09-06 image; death on 09-07).
+- **Overlay v2 pushed 14:23:** `etc/systemd/system-sleep/20-odin3-wifi-off-in-sleep` (rfkill around suspend). Verified on a plain cycle and two game cycles; the game survives sleep and is responsive.
+- **Kernel research:** Armada's kernel lacks thorch's RPMh regulator sleep-set patches (every rail stays at full power in sleep on mainline) and the Odin 3 DT has the same WAKE# polarity bug thorch fixed on the Odin 2 (gpio104 idles high, DT says active-high). Plan and sources in ROADMAP B4.
+- **Tools:** `odin.py push` installs shebang files 0755 and only restarts `armada-powerd` when an `/etc/armada` file was pushed. Raw sleep data in `device-data/sleep-test-*/` (git-ignored).
 
 ## Active blockers
 
-None. Device/repo parity: **overlay v1** unchanged and applied; `device-state/` unchanged.
+None. Device/repo parity: **overlay v2** applied 2026-09-11 14:23 = repo; `device-state/` re-pulled 12:14 after the fan-curve edit = device.
 
 ---
 
 ## Notes & things to watch
 
-- **Upstream drift: 50 at this `/end`.** The start hook reports the fresh count; rebase is the first thing next session (D-2).
-- **Other projects on the template** will report "template drift" at their next start; a one-command resync (`check-template-drift.py --sync`) + commit fixes it. Their `protected_branches` stays empty — only this repo refuses `main`. The other machine needs a KB pull + `install-global.py`.
-- **First fresh session on the new layer = L-17's test.** If the start hook injects nothing, check `python --version` inside Claude Code's shell and `CLAUDE_PROJECT_DIR` (template README → Troubleshooting).
+- **Owner rules from today:** performance overlay off outside games; quit the game before sleeping (1.65 W vs 0.47 W); a forgotten screen-on device drains ~2.1 W (14 h).
+- **Sleep floor from `/etc` is ~0.47 W ≈ 70 h.** Below that = kernel work under D-7 (ROADMAP B4 plan): thorch `0218`/`0219` + an Odin 3 DT patch (state-mem rails, WAKE# polarity) on `armada-os/armada-packages`.
+- **`suspend-dispatch` forces `mem_sleep=s2idle` on every suspend**; a system-sleep hook is the only `/etc` way to change the mode (deep gains nothing over the Wi-Fi hook, so none is installed).
+- **Test scripts live on the device in `/var/tmp/`** (`gamesleep10.sh`, `sleep10*.sh`, `bisect.sh`, …; DEVICE.md lists them). All detach with `nohup`, set an RTC alarm, and write `log.txt` in `/var/tmp/sleep-test-<ts>-<tag>/`; fetch after the alarm with `odin.py run cat`. `odin.py sudo` elevates only the first command of a compound string — use a script file. Script output via `odin.py run bash file` came back empty several times; `bash -x file 2>/dev/null` always worked.
+- **The % battery gauge lies above ~90 %** — use `charge_counter` deltas (µAh) for drain; consistent to ±1 mAh over 10 min.
 - **Calling `odin.py put`/`get` from Git Bash needs `MSYS_NO_PATHCONV=1`.**
-- **In-game frame cap value for runs 1–2 is unknown** — ask.
-- **The % battery gauge lies above ~90 %** — use `bat_uah` deltas, not `%`, for drain.
-- `power_supply/battery/power_now` still unverified (B4). Idle load average ~4–5 on the Steam home screen (B5).
-- **Fresh deployments lose `/etc` and `/var`** — re-`put` the logger after any installer run.
+- **Upstream #403** (Pocket Fit Elite, same SoC): native sleep sometimes never wakes — not seen here in 14 cycles, watch it.
+- In-game frame cap for the Sep 7 runs still unknown; `power_supply/battery/power_now` unverified; fresh deployments lose `/etc` and `/var` (re-push the overlay after any installer run).
