@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-09-11 15:25 (session 5 `/end` — rebase, idle CPU solved, fan-off curve, sleep measured + overlay v2; overnight check L-19 queued)
+**Last updated:** 2026-09-12 04:10 (session 6 mini-wrap — overnight + two 60-min sleep measurements; L-20 root-caused to Steam's idle timer; fan-off signed off by ear)
 
 > This file carries only the **NEXT ACTION** + this-session deltas. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,46 +8,43 @@
 
 ## 📍 NEXT ACTION
 
-**First, read the overnight result (L-19):** the user slept the device ~15:30 on 2026-09-11 with the game quit, overlay v2 live and the fan-off curve; ~7 h later they report battery % at wake, Wi-Fi state, Steam reconnect time, fan noise at idle. Expected ~5–6 % per 8 h at 0.47 W; a much bigger drop means something (audio path? Bluetooth? a self-wake) is different overnight — pull `journalctl` for the sleep window and `charge_counter` deltas first. Then **B4, sleep with a game open (1.65 W vs 0.47 W).** One 10-min sleep with the game **muted / its audio device closed** (user parks it in a menu, says ready; `/var/tmp/gamesleep10.sh` on the device does the cycle), then one with the GPU forced to its floor via the Power tab — one variable each, `charge_counter` deltas. Then: the **idle-to-sleep timeout** (awake idle is 2.1 W screen-on; Steam's setting), an **upstream issue** for SM8750 sleep depth with today's numbers (ROADMAP B4, `device-data/sleep-test-20260911-122117/`), and the L-18 fan sign-off by ear. Ask the user for last night's battery % before/after sleep (hook v2 live since 14:23). B1's idle recording + pitch sweep stay paused behind B4.
+**Decide L-22 with the user, then measure L-23b.** L-22: Steam re-suspends the device ~1.3 s after a wake from a battery sleep longer than its 900 s idle-suspend timeout (5 of 7 wakes; root cause and options in ROADMAP B4). The user called the 5-s post-resume inhibitor drop-in "hacky" and is right that it is a workaround; the choice on the table is (a) carry the drop-in as an interim (`device-overlay/etc/systemd/system-sleep/60-odin3-resume-settle`, not written yet) or (b) no workaround, press the button twice — and in both cases **two reports**: Valve (steam-for-linux) and Armada (B9), with the `ComputeNextPowerState: active: 3602 < 900` log excerpt; ask before filing under the user's account. L-23b: the alternating 60-min pair (hook on / off / on / off, same charge band, off charger, `/var/tmp/sleep60.sh` — edit the folder tag first) to decide whether overlay v2 stays; the 1-h numbers so far say the Wi-Fi hook saves nothing measurable (187 vs 168 mA). Then the game-audio sleep test (B4), the idle-to-sleep timeout (Steam's, 900 s on battery — now known), and the SM8750 sleep-depth upstream issue.
 
-**Current phase:** B4 Battery + sleep — game-sleep audio test, idle timeout, upstream issue (the statusline parses this line)
+**Current phase:** B4 Battery + sleep — L-22 decision, L-23b hook-on/off pair, then game-audio sleep test (the statusline parses this line)
 
-**Build status:** working (`tools/check-delta.sh` OK on all 34 delta files)
+**Build status:** working (`tools/check-delta.sh` OK)
 
-**Remote:** `origin/odin3-tuning` = HEAD after this wrap's push. Fork point = `upstream/main` = `a9a38ba` (rebased 2026-09-11, 25 commits replayed clean). `main` = `origin/main` = `14230df` (mirror, untouched). Device image `20260911.a9a38ba`. **Other machine after a rebase:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
+**Remote:** `origin/odin3-tuning` = HEAD after this wrap's push. Fork point = `upstream/main` = `a9a38ba`. `main` = `origin/main` = `14230df` (mirror, untouched). Device image `20260911.a9a38ba`. **Other machine after a rebase:** `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.
 
 ---
 
 ## Optional loose ends (NOT the next step)
 
-Open: L-3 (user: AYN warranty check), L-4 (user: off-PC ABL backup copy), L-5 (download-plateau experiment), L-6 (Performance-switch freeze repro, B3), L-13 (B4 sleep checks), L-15 (B4: charge thresholds not enforced), L-16 (B3: `gpu_max` ratio no-op; B9 issue/PR), L-17 (protocol migration gate — closes itself when the next fresh session's start→`/end` cycle passes). See `docs/SESSION_LEDGER.md`.
+Open: L-3 (user: AYN warranty check), L-4 (user: off-PC ABL backup copy), L-5 (download-plateau experiment), L-6 (Performance-switch freeze repro, B3), L-13 (B4: (c) warm screen side still the user's; (a)(b) answered), L-15 (B4: charge thresholds not enforced), L-16 (B3: `gpu_max` ratio no-op; B9 issue/PR). See `docs/SESSION_LEDGER.md`.
 
 ---
 
-## What happened this session
+## What happened this session (2026-09-12, 00:30–04:10)
 
-- **Rebase** `odin3-tuning` onto `upstream/main` `a9a38ba` (50 commits, none sleep-related), pushed `--force-with-lease`.
-- **Idle CPU (B5) solved:** the "30 % in the library" was Steam's performance overlay — 33 % / GPU 832 MHz with the FPS counter on, 3 % / 160 MHz off. Owner rule: overlay only in game.
-- **Fan-off at idle (B2):** the user's Relaxed curve never went below 51; set by direct edit on the user's ask to `0:0,50:0,51:51,65:51,76:77,82:102,88:153,98:255` + `min_pwm=0` (same path + reload the app uses; backups on the device). PWM 0 at 40–45 °C all afternoon. L-18 watch.
-- **Sleep (B4) measured, 14 cycles:** SoC never enters AOSD/CXSD/DDR low-power in s2idle *or* deep; CPU cluster does sleep; suspend/wake reliable (all wakes = RTC alarm or power key). 10-min watts: s2idle 0.75, deep 0.49, Wi-Fi off 0.47, deep+Wi-Fi off 0.47, game open 1.65. Bisection cleared Wi-Fi radio, Wi-Fi card, gamepad UART; PCIe RC can't unbind. History: upstream gave the Odin 3 deep sleep on 07-12 and switched everything to s2idle on 09-03 (the user's 09-06 image; death on 09-07).
-- **Overlay v2 pushed 14:23:** `etc/systemd/system-sleep/20-odin3-wifi-off-in-sleep` (rfkill around suspend). Verified on a plain cycle and two game cycles; the game survives sleep and is responsive.
-- **Kernel research:** Armada's kernel lacks thorch's RPMh regulator sleep-set patches (every rail stays at full power in sleep on mainline) and the Odin 3 DT has the same WAKE# polarity bug thorch fixed on the Odin 2 (gpio104 idles high, DT says active-high). Plan and sources in ROADMAP B4.
-- **Tools:** `odin.py push` installs shebang files 0755 and only restarts `armada-powerd` when an `/etc/armada` file was pushed. Raw sleep data in `device-data/sleep-test-*/` (git-ignored).
+- **Overnight sleep read (L-19 closed):** 16:15 → 00:36, 8 h 21 min, 87 → 65 % ≈ 0.85 W by gauge, one unbroken suspend, Wi-Fi hook worked, Bluetooth off. CPU cluster outside its idle state ~2 s all night, so CPU wakes are not the drain.
+- **60-min coulomb sleeps:** hook on 187 mA ≈ 0.73 W; hook off 168 mA ≈ 0.65 W. **The 10-min figures (0.47 / 0.75 W) do not scale; real sleep drain ≈ 0.7–0.85 W ≈ 40 h from full, and the Wi-Fi hook's saving is unproven at 1 h** (L-23b pending). CURRENT_STATE's old "5–6 % per 8 h" expectation was wrong (should have been ~11 %).
+- **L-20 root-caused (closed):** D-Bus monitor + logind debug + Steam's log: the second suspend is Steam's battery idle-suspend (900 s) firing at wake because its idle clock counts the suspended time. Not powerbuttond, not logind. Research (web + code): unreported anywhere; SteamOS has no mitigation, it just wins the race; no URI/console command resets the timer; `IdleSuspendBatterySeconds` in `config.vdf` is the setting. Options ranked in ROADMAP B4; user pushback recorded above.
+- **Fan-off curve signed off by ear (L-18 closed):** "fine when it's off"; the tone at ~30 % PWM is B2's whine-band work (recorded in ROADMAP B2).
+- **Device now:** overlay v2 applied and hook **re-enabled** (0755, 04:03) after the no-hook hour; logind log level back to `info`; bus monitor killed. Test scripts and logs remain in `/var/tmp` (`sleep60.sh`, `arm-l20.sh`, `collect*.sh`, `l20-busmon.txt`, `sleep-test-*`). Battery 56 %, off charger, user was told they may plug in.
 
 ## Active blockers
 
-None. Device/repo parity: **overlay v2** applied 2026-09-11 14:23 = repo; `device-state/` re-pulled 12:14 after the fan-curve edit = device.
+None. Device/repo parity: overlay v2 = repo, hook executable again; `device-state/` unchanged since 2026-09-11 12:14.
 
 ---
 
 ## Notes & things to watch
 
-- **Owner rules from today:** performance overlay off outside games; quit the game before sleeping (1.65 W vs 0.47 W); a forgotten screen-on device drains ~2.1 W (14 h).
-- **Sleep floor from `/etc` is ~0.47 W ≈ 70 h.** Below that = kernel work under D-7 (ROADMAP B4 plan): thorch `0218`/`0219` + an Odin 3 DT patch (state-mem rails, WAKE# polarity) on `armada-os/armada-packages`.
-- **`suspend-dispatch` forces `mem_sleep=s2idle` on every suspend**; a system-sleep hook is the only `/etc` way to change the mode (deep gains nothing over the Wi-Fi hook, so none is installed).
-- **Test scripts live on the device in `/var/tmp/`** (`gamesleep10.sh`, `sleep10*.sh`, `bisect.sh`, …; DEVICE.md lists them). All detach with `nohup`, set an RTC alarm, and write `log.txt` in `/var/tmp/sleep-test-<ts>-<tag>/`; fetch after the alarm with `odin.py run cat`. `odin.py sudo` elevates only the first command of a compound string — use a script file. Script output via `odin.py run bash file` came back empty several times; `bash -x file 2>/dev/null` always worked.
-- **The % battery gauge lies above ~90 %** — use `charge_counter` deltas (µAh) for drain; consistent to ±1 mAh over 10 min.
+- **Owner rules:** performance overlay off outside games; quit the game before sleeping; a forgotten screen-on device drains ~2.1 W; after a battery sleep > 15 min expect to press the power button twice until L-22 is settled.
+- **Sleep measurement rule (new):** 10-min cycles are only good for A/B of large effects; drain figures need ≥ 60 min by `charge_counter` (`/var/tmp/sleep60.sh`; the device re-suspends on the alarm wake because of L-22, so it must be key-woken afterwards and Wi-Fi is only up for ~1 s at the alarm).
+- **`suspend-dispatch` forces `mem_sleep=s2idle` on every suspend**; a system-sleep hook is the only `/etc` way to change the mode.
+- **Launching a detached script over SSH:** `odin.py sudo "bash -c 'setsid nohup bash /var/tmp/x.sh >/dev/null 2>&1 </dev/null &'"`; a bare `nohup … &` dies with the session. The SSH call hangs when the device suspends under it — wrap in `timeout`.
+- **The % battery gauge lies above ~90 %** — use `charge_counter` deltas (µAh) for drain.
 - **Calling `odin.py put`/`get` from Git Bash needs `MSYS_NO_PATHCONV=1`.**
-- **L-20: a power-key wake can be followed 1 s later by a fresh suspend** (seen 14:19 and 16:12); the user presses once more and it stays up. Overnight this is harmless (it goes back to sleep), but it confuses the morning reading — ask whether the wake needed two presses.
-- **Upstream #403** (Pocket Fit Elite, same SoC): native sleep sometimes never wakes — not seen here in 14 cycles, watch it.
+- **Upstream #403** (Pocket Fit Elite, same SoC): native sleep sometimes never wakes — still not seen here (now ~20 cycles).
 - In-game frame cap for the Sep 7 runs still unknown; `power_supply/battery/power_now` unverified; fresh deployments lose `/etc` and `/var` (re-push the overlay after any installer run).
