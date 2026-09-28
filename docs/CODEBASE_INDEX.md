@@ -40,9 +40,8 @@
 
 | File | Purpose |
 |---|---|
-| `device-overlay/README.md` | Layout rules: mirrors `/etc`; only files with no Armada Control writer; every file's header says what it does and how to revert. v1 since 2026-09-06. |
+| `device-overlay/README.md` | Layout rules: mirrors `/etc`; only files with no Armada Control writer; every file's header says what it does and how to revert. v1 since 2026-09-06; version history v1–v3 at its foot. |
 | `device-overlay/etc/udev/rules.d/99-armada-hide-internal-ufs.rules` | udev rule: `UDISKS_IGNORE=1` on every block device under the SoC's UFS host (`KERNELS=="*.ufs"`), so udisks flags the internal chip `HintIgnore` and Steam's Storage page stops listing it as an empty 464.5 GB drive (L-12). Header carries the apply/revert commands. Upstream candidate: matches by parent chain, not drive letter. |
-| `device-overlay/etc/systemd/system-sleep/20-odin3-wifi-off-in-sleep` | systemd-sleep hook: `rfkill block wifi` on `pre`, `unblock` on `post`. Why we diverge: upstream only lets NetworkManager disconnect at suspend; the WCN7860 stays powered and costs ~0.28 W all night on this unit (10-min sleeps: 0.75 W → 0.47 W, ROADMAP B4, 2026-09-11). Revert: delete the file; `rfkill unblock wifi` if a wake ever leaves it off. Pushed 2026-09-11 14:23 (overlay v2). |
 
 ## device-state/ (UI-owned configs as last pulled — a record, never pushed)
 
