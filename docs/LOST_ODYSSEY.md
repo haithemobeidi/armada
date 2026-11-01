@@ -1,6 +1,6 @@
 # Lost Odyssey Recomp — native ARM64 build on the Odin 3
 
-> Side project, outside the B0–B10 blocks. Researched and decided 2026-11-01; the build is planned for 2026-11-02, on the device. Nothing has been done on the device yet.
+> Side project, outside the B0–B10 blocks. Researched and decided 2026-11-01; **built, imported and added to Steam on the device the same day** (see "Build log" below). Open: the first-play report (Pause C).
 
 **What it is.** [freefrank/LostOdysseyRecomp](https://github.com/freefrank/LostOdysseyRecomp) is a static recompilation of the Xbox 360 game into a native program (GPL-3.0, no game assets). The latest release is **v1.1.0** (2026-10-26). The repo is very active: it was last pushed 2026-10-31, so check for a newer tag on the day.
 
@@ -92,6 +92,11 @@ Pause-points follow `CLAUDE.md` § Device work. **Pause A**: tools and codegen d
 - Configure is silent about the missing ARM64 DXC.
 - **Compile: 263 s** at `-j 4` on the Performance profile (1,390 ninja steps; estimate was 10–30 min). Fan PWM 255; CPU zones 85–94 °C, throttled at the 90/95 °C passive trips (hot/critical 120/125 °C) to ~2.7 GHz; battery 32 °C. Output: 97 MB aarch64 ELF, `ldd` resolves all 35 libraries on the host.
 - Windows Terminal crashed twice on the PC during this session (XAML `0xc000027b`) while PC-side background SSH polling loops ran; cause not proven. Don't poll the device from background loops; check on demand.
+- **Installed to `~/Games/LostOdysseyRecomp/`** (the binary + `assets/`, 1.1 MB, is all the AppImage ships besides DXC). A self-built Linux copy keeps `game/`, `save/`, `settings.ini`, `shaders/` **beside the program**, so it must not live in `out/build/` (a clean rebuild would take the saves). Updating = rebuild, then copy the binary over.
+- **Import:** `--install-source` is Android-only (ignored on Linux); the importer is a gamepad/keyboard file browser starting at the program folder (Enter open, F select, Esc back). In Desktop Mode the built-in controller does **not** reach it — use a keyboard. Its folder scan **skips symlinks**, so a symlink to the SD folder finds nothing ("no supported discs"); a bind mount works (`sudo mount --bind /run/media/armada/SD/LostOdyssey/iso ~/Games/LostOdysseyRecomp/discs`, removed afterwards). Result: 4 discs, 22 GiB apparent; the offered "free disk space" dedups 27 archives with btrfs reflinks (`btrfs filesystem du`: 14.3 GiB exclusive + 1.8 GiB shared ≈ 16 GiB on disk; plain `du` can't see it). It re-offers the same 5.78 GB on every launch (it doesn't recognise reflinked copies as shared) — harmless; answer No.
+- **ARM64 DXC is required, not optional.** The portable shader pack (235 MB `portable_vk.lospv`) downloads fine, but the presentation shaders compile live at startup; without `libdxcompiler.so` beside the binary graphics init fails ("no usable backend; guest startup aborted") and the game exits cleanly. Fedora 44 has no DXC package. Built natively at upstream's revision `9efbb6c` with the target half of `tools/build_dxc_linux_arm64.sh` (same flags, clang, no cross toolchain, needs `clang-tools-extra` for `clang-format`, plus upstream's RewriteObjC source patch): **287 s** at `-j 4`, HLSL→SPIR-V smoke test passed, 31.5 MB, sha256 `7b2ec4d7…a000aa6`. Script `~/src/lo-logs/lo-dxc.sh`. Also staged at `tools/XenosRecomp/thirdparty/dxc-bin/lib/arm64/` so CMake copies it on future builds.
+- **First boot:** Vulkan on Adreno 830 (Turnip), intro movie and audio play. Defaults: 1280×720 output, 720 internal, 30 fps cap, vsync on. **Add to Steam** (in-game, Settings → System) wrote a non-Steam shortcut (`Lost Odyssey Recomp`, Exe = our binary, StartDir = the game folder, artwork from the player's discs); Steam was not running in Desktop Mode.
+- **Settings save only when you leave the Settings page.** `automatic_updates=0` also stops shader-pack auto-downloads (pack already present). FSR/DLSS/XeSS are compiled out (`LO_ENABLE_FSR` defaults OFF; upstream CI enables it with a locally prepared FidelityFX SDK) — use TAA.
 
 ## Risks and open questions
 
@@ -107,7 +112,9 @@ Pause-points follow `CLAUDE.md` § Device work. **Pause A**: tools and codegen d
 Nothing touches `/etc`, services or the boot path. Everything lives under `/var/home/armada`:
 
 - `distrobox rm lo-build` (podman storage under `~/.local/share/containers`)
-- `rm -rf ~/src/LostOdysseyRecomp ~/.config/lost-odyssey-recomp ~/.local/share/lost-odyssey-recomp ~/.local/state/lost-odyssey-recomp` — **the last data folder holds the saves**; back it up first if you want to keep them
+- `rm -rf ~/src/LostOdysseyRecomp ~/src/DirectXShaderCompiler ~/src/dxc-build ~/src/extract-xiso ~/src/lo-logs`
+- `rm -rf ~/Games/LostOdysseyRecomp` — **its `save/` holds the saves**; back it up first if you want to keep them
+- `/var/tmp/lo-setup.sh`, `/var/tmp/lo-setup.log` (host)
 - `rm -rf /run/media/SD/LostOdyssey`
 - Remove the Steam shortcut.
 
