@@ -56,7 +56,7 @@ Runtime state: `/run/armada/perf-state.json` (what `armada-game-launch` applied)
 | OS Version / ABL Version | read-only | |
 | Experimental → Desktop Mode | session default | |
 | Experimental → USB File Transfer | `armada-mtp.service` (uMTP responder) | Off by default. |
-| Experimental → Automatic ABL Updates | `/etc/armada/abl.conf` `auto_update_enabled=1` | "Updates during shutdown." Currently **on**. Relevant to D-7: the bootloader can change under us at shutdown after an OTA — know this before blaming a boot problem on our tuning. |
+| Experimental → Automatic ABL Updates | `/etc/armada/abl.conf` `auto_update_enabled=1` | "Updates during shutdown." **Toggle removed upstream (`d506d11`, 2026-10-19): updating is always on**; the device runs OpenABL 1.2 (`docs/DEVICE.md`). Relevant to D-7: the bootloader can change under us at shutdown after an OTA — know this before blaming a boot problem on our tuning. |
 
 ## What has no UI (candidates for `device-overlay/` or upstream work)
 
