@@ -49,8 +49,9 @@
 | File | Purpose |
 |---|---|
 | `device-state/PULLED_AT.txt` | Timestamp + host of the last `odin.py pull`. |
-| `device-state/etc__armada__power-profiles.conf` | Armada Control's `/etc` overrides (Power + Fans tabs). Currently: Balanced `gpu_max=0.80`. |
-| `device-state/etc__armada__abl.conf` | `auto_update_enabled=1` — bootloader auto-update at shutdown is on. |
+| `device-state/etc__armada__power-profiles.conf` | Armada Control's `/etc` overrides (Power + Fans tabs). As of 2026-11-01: Balanced `cpu_max=0.65`, `cpu_underclock=large`, `gpu_max=0.80` (≈1.8/2.0 GHz CPU, 832 MHz GPU); Performance unpinned (`schedutil`, `gpu_min_mhz=160`, no underclock). Newer Armada Control writes MHz keys (`gpu_min_mhz`). |
+| `device-state/etc__armada__abl.conf` | `auto_update_enabled=1` — bootloader auto-update at shutdown is on. Obsolete since upstream `d506d11` (always on, toggle removed); device runs OpenABL 1.2 (L-30). |
+| `device-state/etc__armada__game-tweaks.json` | Armada Control's per-game/global Compatibility settings. As of 2026-11-01: no per-game entries; global `autoApplyCompat=true`, `turnipDriver=winnative`. |
 | `device-state/var__lib__armada__powerd.state` | Daemon's persisted profile / GPU level / manual clock. |
 
 ## .claude/ (template-managed unless noted — never hand-edit; `check-template-drift.py` compares against the KB template)

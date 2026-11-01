@@ -8,9 +8,9 @@
 
 ## 📍 NEXT ACTION
 
-**L-26 Pause C: the user plays Lost Odyssey Recomp from Gaming Mode** (Library → Non-Steam) and reports FPS at the 30 cap, fan, warmth; Claude reads `fan_pwm`/`temperature` from `odin.py` at the same moments and records it in `docs/LOST_ODYSSEY.md`. Then **B4 L-25** resumes (go below 0.17 W in sleep) — **first re-baseline a 60-min sleep on the new image `20261031.8a72944`**, since the 0.17 W figure is from `20260928.410bcf2`. Upstream reports for the game are L-29 (not urgent).
+**L-31: Lost Odyssey at internal 720 on the unpinned Performance profile** (first play showed ~30 fps at 1080p, GPU-bound at 1100 MHz; data in `docs/LOST_ODYSSEY.md`) — if FPS rises clearly, build FSR into LO. Then **B4 L-25** resumes (go below 0.17 W in sleep) — **first re-baseline a 60-min sleep on the new image `20261031.8a72944`**, since the 0.17 W figure is from `20260928.410bcf2`. B3 (profile retune) got its first data point: pinned Performance wastes ~10 °C and half the fan for no FPS. Upstream reports for the game are L-29.
 
-**Current phase:** B4 Battery + sleep (L-25), with side project L-26 at its first-play check (the statusline parses this line)
+**Current phase:** B4 Battery + sleep (L-25), with side project LO at its 720/FSR check (L-31) (the statusline parses this line)
 
 **Build status:** working — `tools/check-delta.sh` OK 2026-11-01 13:50 (34 delta files). Game: LostOdysseyRecomp v1.1.0 aarch64 build + native DXC, `ldd` clean, boots on Vulkan (Adreno 830) 2026-11-01.
 
@@ -33,7 +33,7 @@ None. Device/repo parity: overlay v3 on both (checked 2026-11-01).
 
 ## Open loops
 
-L-26 (Pause C next), L-25, L-30 (bootloader is now OpenABL 1.2 — recovery ladder unverified), L-29 (upstream reports, game), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
+L-31 (LO 720 test → FSR), L-25, L-30 (bootloader is now OpenABL 1.2 — recovery ladder unverified), L-29 (upstream reports, game), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
 
 ## Owner rules and measurement notes
 

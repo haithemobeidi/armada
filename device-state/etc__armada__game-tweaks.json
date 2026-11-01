@@ -1,0 +1,7 @@
+{
+  "games": {},
+  "global": {
+    "autoApplyCompat": true,
+    "turnipDriver": "winnative"
+  }
+}

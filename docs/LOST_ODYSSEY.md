@@ -99,6 +99,21 @@ Pause-points follow `CLAUDE.md` § Device work. **Pause A**: tools and codegen d
 - **In a Desktop Mode window the Settings page's bottom (its save control) is cut off** and Esc/Backspace may not leave it; the user found the save control by scrolling, and `settings.ini` then read `automatic_updates=0` (13:47:55). Closing the window afterwards is safe. Change settings in Gaming Mode (fullscreen, controller works).
 - **Settings save only when you leave the Settings page.** `automatic_updates=0` also stops shader-pack auto-downloads (pack already present). FSR/DLSS/XeSS are compiled out (`LO_ENABLE_FSR` defaults OFF; upstream CI enables it with a locally prepared FidelityFX SDK) — use TAA.
 
+## First play (Pause C), 2026-11-01, Gaming Mode, plugged in at 100 %
+
+Same scene, LO settings `internal_resolution=1080`, `frame_rate=120`, vsync on. FPS from the user (Steam overlay); the rest read over SSH (`armada-power status`, sysfs).
+
+| Profile | FPS (user) | GPU | CPU | SoC temp | Fan PWM | Battery |
+|---|---|---|---|---|---|---|
+| Performance, factory (pinned: `performance` governor, GPU min = max) | ~30 | 1100 MHz (pinned) | all cores at max; 84 % idle; game main thread ≈ 0.8 core | 89–91 °C (hottest = CPU zones) | 224–249 | 32 °C |
+| Balanced, the user's (`cpu_underclock=large`, `cpu_max=0.65`, `gpu_max=0.80`) | **< 30** | 832 MHz (capped) | capped 1785 / 1958 MHz | 54–59 °C | 195 → 75 | — |
+| Performance, unpinned (`schedutil`, `gpu_min_mhz=160`, no underclock) | ~30 | **1100 MHz chosen by the governor** | E-cores 3.0–3.5 GHz, prime ~1.0–1.2 GHz; 75 % idle | 82 → 77 °C | ~100 | 33 °C |
+
+- **The GPU is the limit at 1080p internal**: unpinned, it still picks its 1100 MHz top. The CPU is not (mostly idle; native code, no FEX). Balanced's ~half CPU clocks starve the main game thread, hence < 30.
+- **Pinning bought nothing**: the same FPS unpinned, with the fan at less than half and 10+ °C cooler. User reports: fan "like a jet engine" when pinned.
+- Why a "360 game" is heavy here: the recomp makes the PowerPC CPU code native, but the Xenos GPU (draws, shaders, EDRAM) is still translated every frame to Vulkan on Turnip, and 1080p internal is 2.25× the 360's 720p.
+- Next (L-31): internal 720 on the unpinned profile; if FPS rises clearly, build FSR (`LO_ENABLE_FSR`, FidelityFX SDK + Vulkan shaders) to upscale 720 → 1080.
+
 ## Risks and open questions
 
 - **Native path untested upstream.** We bypass `build_linux_arm64.sh`. Unknown: does `cmake/LoOptimization.cmake` add x86 flags on aarch64 if `LO_TARGET_ARCH` is missing? (We pass it.)
