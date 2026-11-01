@@ -25,6 +25,7 @@
 - **Overlay v3** = repo: only `99-armada-hide-internal-ufs.rules` (still present 2026-11-01). `/etc/systemd/system-sleep/` empty.
 - Sleep: 43 mA ≈ 0.17 W (60 min, Eco, 80 %) on the **previous** image `20260928.410bcf2`.
 - **Lost Odyssey Recomp** installed in `~/Games/LostOdysseyRecomp/` (game data, saves, settings beside the program); build tree `~/src/LostOdysseyRecomp`, DXC `~/src/DirectXShaderCompiler` + `~/src/dxc-build`, container `lo-build`, ISOs on the SD card. Revert: `docs/LOST_ODYSSEY.md`. Nothing in `/etc`, no services.
+- **LocalSend 1.18.2** (Flathub `org.localsend.localsend_app`, aarch64, system install, 2026-11-01) for on-demand file/save transfer to the PC and Ally X20; user override `--filesystem=~/Games` (sandbox otherwise sees only Downloads). firewalld is inactive (port 53317 open). Revert: `flatpak override --user --reset org.localsend.localsend_app; sudo flatpak uninstall org.localsend.localsend_app; sudo flatpak uninstall --unused`.
 - Test scripts remain in `/var/tmp` (`sleep60.sh` tagged `-60min-newkernel-nohook`; edit the tag per run).
 
 ## Active blockers
