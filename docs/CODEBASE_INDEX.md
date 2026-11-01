@@ -27,6 +27,7 @@
 | `docs/SESSION_LEDGER.md` | Append-and-strike ledger of open session-scoped items (L-n IDs). |
 | `docs/DEVICE.md` | The handheld: identity, SSH access, CPU/GPU frequency tables, thermal zones + fan (no tach), power supplies, storage layout, config ownership table, **applied overlay version**, backups + recovery ladder, Android-side gotchas, fan-noise leads. |
 | `docs/ARMADA_CONTROL.md` | Every Armada Control setting by tab, the file it writes, and what it means on SM8750; what has no UI. |
+| `docs/LOST_ODYSSEY.md` | Side project outside the blocks: the plan for building freefrank/LostOdysseyRecomp natively for ARM64 on the Odin in a Fedora 44 distrobox (no FEX). Covers routes rejected, the inputs (the user's USA/Europe ISOs), upstream's CI timings, step-by-step commands with pause-points, risks, revert. |
 
 ## tools/
 

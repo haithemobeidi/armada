@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-09-28 14:05 (session 7 /end — upstream's s2idle fix measured, Wi-Fi hook dropped, kernel sleep-depth research recorded)
+**Last updated:** 2026-11-01 03:40 (session 8 /end — Lost Odyssey Recomp researched, native ARM64 on-device build planned; no device or code changes)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,30 +8,30 @@
 
 ## 📍 NEXT ACTION
 
-**B4, L-25: go below 0.17 W in sleep.** First confirm the new floor overnight (quit the game, unplug, one sleep, read `charge_counter`); then, with the device awake ~5 min, the read-only holder checks (`sync_state() pending` in dmesg, `interconnect_summary` ebi/llcc, `pm_genpd_summary`, per-subsystem `qcom_stats`); then a cdsp-stop 60-min sleep. The own-kernel test without #545's PCIe `opp-suspend-1` (does SM8750 really reset without a DDR sleep vote?) is D-7: fresh backup + the user's explicit go. The user parked this 2026-09-28 ("too lazy now, later") — no rush; if they want something else first, B1's idle recording and the game-audio sleep test (now largely answered by #545's ADSP patches) are next in B4/B1.
+**L-26 (side project, the user's plan for 2026-11-02): build LostOdysseyRecomp natively for ARM64 on the Odin** in a Fedora 44 distrobox, no FEX. Follow `docs/LOST_ODYSSEY.md` step by step: pause A after codegen, pause B before the first launch (announce it first), pause C after a first play. Start by checking for a release newer than v1.1.0, then begin the 29.2 GB ISO copy (`C:\Users\haith\OneDrive\Desktop\LO\`) to the SD card, letting it run in parallel with the container setup. The device must be plugged in and awake. After that, **B4 L-25** resumes (go below 0.17 W in sleep; plan in ROADMAP B4; the own-kernel test is D-7: fresh backup + the user's explicit go).
 
-**Current phase:** B4 Battery + sleep — L-25 sleep-depth work (the statusline parses this line)
+**Current phase:** Side project L-26 (Lost Odyssey native build), then B4 L-25 sleep-depth work (the statusline parses this line)
 
-**Build status:** working — `tools/check-delta.sh` OK 2026-09-28 14:05 (33 delta files).
+**Build status:** working — `tools/check-delta.sh` OK 2026-11-01 03:36 (34 delta files).
 
-**Remote:** `odin3-tuning` rebased onto `upstream/main` = `410bcf2` on 2026-09-28 and pushed (`--force-with-lease`). `main` = `origin/main` (mirror, untouched). **Other machine: `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.**
+**Remote:** `odin3-tuning` rebased onto `upstream/main` = `410bcf2` on 2026-09-28. `upstream/main` is now **324 commits ahead** (2026-11-01, latest #818 odin2-gyro). Rebase at a quiet point, not inside the L-26 build. `main` = `origin/main` (mirror, untouched). **Other machine: `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.**
 
 ---
 
 ## Device
 
-- **Image `20260928.410bcf2`** (kernel 7.2.6, includes upstream #545 s2idle + ADSP sleep fixes), updated by the user via bootc; `/etc` carried over.
-- **Overlay v3** = repo: only `99-armada-hide-internal-ufs.rules`; the Wi-Fi sleep hook deleted 2026-09-28 11:33. `/etc/systemd/system-sleep/` empty.
+- **Image `20260928.410bcf2`** as last verified 2026-09-28 (kernel 7.2.6, includes upstream #545 s2idle + ADSP sleep fixes). Not checked since; the user may have updated via bootc.
+- **Overlay v3** = repo: only `99-armada-hide-internal-ufs.rules`. `/etc/systemd/system-sleep/` empty.
 - Sleep: 43 mA ≈ 0.17 W (60 min, Eco, 80 %); Wi-Fi reconnects ~1 s after wake without the hook.
 - Test scripts remain in `/var/tmp` (`sleep60.sh` tagged `-60min-newkernel-nohook`; edit the tag per run).
 
 ## Active blockers
 
-None. Device/repo parity: overlay v3 on both.
+None. Device/repo parity: overlay v3 on both (as of 2026-09-28).
 
 ## Open loops
 
-L-25 (next), L-22 (parked), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
+L-26 (next), L-25, L-22 (parked), L-28 (template resync, user's call), L-27 (kbdoc), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
 
 ## Owner rules and measurement notes
 
@@ -40,3 +40,4 @@ L-25 (next), L-22 (parked), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/S
 - The device falls asleep a few minutes after the user stops touching it — ask them to keep it awake before any SSH read sequence.
 - `odin.py push` never deletes a dropped overlay file — remove it on the device by hand.
 - The % gauge lies above ~90 %; `odin.py put`/`get` from Git Bash need `MSYS_NO_PATHCONV=1`.
+- The SD card is ext4 (Armada game storage). If the Android side offers to format it, decline — the Steam library lives there.
