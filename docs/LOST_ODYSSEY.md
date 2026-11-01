@@ -83,6 +83,16 @@ Pause-points follow `CLAUDE.md` § Device work. **Pause A**: tools and codegen d
 8. **First launch** → **Pause B, announce first.** Run with `LO_NO_UPDATE=1` and turn off **Automatic updates** in Settings. The updater "can update itself" on the AppImage, and it must never swap our ARM64 binary for the x64 one. The importer opens: point it at the ISOs on the SD card (it checks each disc's SHA256). By default it imports to `~/.local/share/lost-odyssey-recomp/game/` on internal storage, which has plenty of room. Accept the shader-pack download. Then use Settings → System → **Add to Steam** (or `--add-to-steam` with Steam closed) to put it in Gaming Mode.
 9. **Observe** → **Pause C.** In-game performance overlay FPS at a 30 and a 60 cap, PWM and temperature from `odin.py`, and the user's reports of noise and warmth. Battery drain only on a later, separate run. Note that the game caps Fast loading on battery devices.
 
+## Build log (2026-11-01)
+
+- v1.1.0 = commit `fcfda13` (annotated tag). Container + 32 packages in < 1 min (clang 22.1.8, CMake 4.3, Ninja 1.13); all four ISOs on the SD card at `/run/media/armada/SD/LostOdyssey/iso/` (the mount is `/run/media/armada/SD`, not `/run/media/SD`), ~100 MB/s over Wi-Fi.
+- The distrobox does **not** share the host's `/var/tmp`; scripts and logs live in `~/src/lo-logs/`.
+- `default.xex` from disc 1 via extract-xiso: 6,623,232 bytes, sha256 `175ae53d…640de3`. Codegen: "PPC generation: OK", 246 `ppc_recomp.*.cpp`.
+- **Configure fails without a `linux-aarch64` FFmpeg config** (`thirdparty/ffmpeg.cmake`: "No FFmpeg config for linux-aarch64"); upstream ships only `android-aarch64` and `macos-aarch64`, and `docs/LINUX_ARM64.md` does not mention it, so upstream's own ARM64 path is broken at v1.1.0. Fix, per upstream's `ffmpeg-config/android-aarch64/README.md` recipe: in a throwaway copy of the pinned fork (`15ece08`), `mv config.h config.h.fork` and `./configure --cc=clang --arch=aarch64 --target-os=linux --disable-everything --disable-programs --disable-all --disable-autodetect --enable-avcodec --enable-avutil --enable-decoder=xmaframes`, then copy `config.h` to `thirdparty/ffmpeg-config/linux-aarch64/`. Script: `~/src/lo-logs/lo-ffmpeg-cfg.sh`. **Upstreamable** as a one-file PR. Re-run it after any update that moves the FFmpeg pin.
+- Configure is silent about the missing ARM64 DXC.
+- **Compile: 263 s** at `-j 4` on the Performance profile (1,390 ninja steps; estimate was 10–30 min). Fan PWM 255; CPU zones 85–94 °C, throttled at the 90/95 °C passive trips (hot/critical 120/125 °C) to ~2.7 GHz; battery 32 °C. Output: 97 MB aarch64 ELF, `ldd` resolves all 35 libraries on the host.
+- Windows Terminal crashed twice on the PC during this session (XAML `0xc000027b`) while PC-side background SSH polling loops ran; cause not proven. Don't poll the device from background loops; check on demand.
+
 ## Risks and open questions
 
 - **Native path untested upstream.** We bypass `build_linux_arm64.sh`. Unknown: does `cmake/LoOptimization.cmake` add x86 flags on aarch64 if `LO_TARGET_ARCH` is missing? (We pass it.)
