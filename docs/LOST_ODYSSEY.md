@@ -32,7 +32,7 @@ Each release has five packages: `windows-x64` zip, `linux-x64` AppImage, `linux-
 
 - Fedora 44 bootc. `distrobox` and `podman` are in the image (`build_files/10-base-packages.sh`).
 - 16 GB RAM plus zram 14.6 GB. Root is a 418 GB btrfs (home and container storage live here). SD card: 1 TB ext4 at `/run/media/SD`.
-- SSH: `armada@192.168.1.188` (DHCP; the IP has moved before). `odin.py` uses OpenSSH, so plain `scp` works. From Git Bash, put `MSYS_NO_PATHCONV=1` in front.
+- SSH: `armada@192.168.1.189` (DHCP; the IP has moved before). `odin.py` uses OpenSSH, so plain `scp` works. From Git Bash, put `MSYS_NO_PATHCONV=1` in front.
 - Keep it **plugged in and awake**: it sleeps a few minutes after the last touch, and SSH hangs under a suspend.
 
 ## Time — measured upstream, estimated here

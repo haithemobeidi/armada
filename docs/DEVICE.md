@@ -9,18 +9,19 @@ Hardware facts, access, sysfs paths, config ownership, backups, and **what is cu
 | Device | AYN Odin 3 (`ARMADA_DEVICE_ID=ayn-odin-3`, `ARMADA_SOC_CLASS=SM8750`) |
 | SoC | Snapdragon 8 Elite, SM8750, 3 nm. 8 cores: 6× Phoenix M + 2× Phoenix L (Oryon). Adreno 830. |
 | RAM / swap | 16 GB (14 963 MiB usable); zram swap 14.6 GB, `vm.swappiness=180` |
-| OS | ArmadaOS **`20260906.41d2e10`** from `ghcr.io/armada-os/armada:testing` (bootc, composefs root), Fedora 44, kernel `7.2.3`. Observed 2026-09-06 on the fresh internal deployment (the SD install had been `20260904.14230df`). |
+| OS | ArmadaOS **`20261031.8a72944`** from `ghcr.io/armada-os/armada:testing` (bootc, composefs root), Fedora 44, kernel `7.2.6`. Read 2026-11-01; the user updates via Steam (internal deployment 2026-09-06 was `20260906.41d2e10`). |
+| Update channels | Steam's single "Beta Participation" dropdown = **Preview** = OS `testing` + Steam client `publicbeta` (Valve has only stable/beta clients; `package/beta` dates from the 2026-09-06 install). Picking **Stable** there also moves the OS to `armada:stable` → an older image on the next update = boot path (D-7). To change only the client: Developer → Show Advanced Update Channels → Steam Client Update Channel. Known cosmetic bug on the Beta client: QAM dropdowns shifted right and clipped (upstream #802, 2026-10-27; client 1793235415); the user accepts it — stays on Beta for the suspend-crash and non-Steam-shortcut fixes. |
 | Hostname | `fedora` (default; avahi runs but `armada.local` does not resolve — backlog item to set a real hostname) |
 | Boot | ROCKNIX ABL flashed (version in `abl/release.env`), boot source **Internal**. Armada boots from **internal UFS** since 2026-09-06 (D-9; `root=` `sda20`, `boot=` `sda19`, ESP `sda18`, verified over SSH). Android kept, factory-reset, in a 16 GiB `userdata` (`sda17`); reachable by toggling the ABL boot source. |
 | Wi-Fi | `wlp1s0`, `ath12k_wifi7_pci` (WCN7850 family), 6 GHz ch 165 @ 160 MHz |
 
 ## Access
 
-- **SSH:** `ssh armada@192.168.1.188` — key auth from this PC (`~/.ssh/id_ed25519.pub` installed in `/var/home/armada/.ssh/authorized_keys`). `tools/odin.py` wraps it.
+- **SSH:** `ssh armada@192.168.1.189` — key auth from this PC (`~/.ssh/id_ed25519.pub` installed in `/var/home/armada/.ssh/authorized_keys`). `tools/odin.py` wraps it.
 - **Password** (image default, every Armada install): user `armada`, password `armada`. `sudo` needs it (only a few `systemctl`/session commands are NOPASSWD).
 - **Toggle:** Armada Control → Settings → System → **Enable SSH** (runs `systemctl enable --now sshd`). Turn it off if the device leaves the home network.
 - **After any fresh deployment** (the internal install is one: `ostree admin deploy --no-merge`, and `/var` is new) SSH is off again and the key is gone: the user re-enables SSH in the UI, then the key goes back with paramiko + the image's default password (`ssh-keygen -R <ip>` first — new host keys). Done 2026-09-06; the IP stayed `192.168.1.188`.
-- **IP is DHCP and has moved before** (was `.186`). Find it in Steam → Settings → Internet, or `arp -a` for the Atheros OUI `00-03-7f`, or scan the LAN for port 22.
+- **IP is DHCP and has moved before** (was `.186`, then `.188`; `.189` since 2026-11-01). Find it in Steam → Settings → Internet, or `arp -a` for the Atheros OUI `00-03-7f`, or scan the LAN for port 22.
 - **ADB is Android-only.** Nothing on the Armada side speaks it.
 - **No terminal for the user.** Claude does the SSH work; the user observes.
 

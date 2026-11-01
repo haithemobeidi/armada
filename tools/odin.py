@@ -25,7 +25,7 @@ import pathlib
 import subprocess
 import sys
 
-DEFAULT_HOST = "192.168.1.188"
+DEFAULT_HOST = "192.168.1.189"
 USER = "armada"
 REPO = pathlib.Path(__file__).resolve().parent.parent
 DEVICE_STATE = REPO / "device-state"
