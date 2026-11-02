@@ -124,6 +124,20 @@ Same scene, LO settings `internal_resolution=1080`, `frame_rate=120`, vsync on. 
 - Configure: `-DLO_ENABLE_FSR=ON -DLO_REQUIRE_FSR=ON -DLO_FSR_SDK_ROOT=$PWD/out/deps/fidelityfx-sdk -DLO_FSR_SHADER_DIR=$PWD/out/fsr-shaders-vk` (REQUIRE makes a bad input fatal). Rebuild 46 s; binary 101 MB, `ldd` clean; `licenses/LICENSE-FidelityFX.txt` copied beside it. Windows path trap on the PC: the scratchpad path breaks MAX_PATH for git clones (mapped it with `subst`), and Git Bash rewrites `/`-leading sparse-checkout patterns (`MSYS_NO_PATHCONV=1`).
 - Revert: reconfigure with `-DLO_ENABLE_FSR=OFF`, rebuild, copy the binary. Open: FPS / °C / PWM with FSR 720→1080 vs native 720 and 1080.
 
+## Other devices: ROG Xbox Ally X20 (Windows), 2026-11-01
+
+User reports only (Steam/Windows overlay). Official Windows v1.1.0 build, which ships FSR 3.1 (plus FSR frame generation, D3D12 only). Everything maxed, 1080p VRR screen, VSync off.
+
+| FSR mode | FPS (user) |
+|---|---|
+| Native AA | 30 (likely the frame-rate cap, not the GPU) |
+| Quality | ~50 |
+| Balanced | 30–50, fluctuating; 30 with the GPU at ~99 % in one heavy area, higher when the view moves |
+
+- Lowering shadow resolution, culling and AO "didn't make a huge difference" (user). **The game is GPU-heavy on x86 too**, so the Odin's cost is not FEX (none here) or Turnip alone. Translating the Xenos GPU work every frame, with effects maxed, is heavy wherever it runs. That backs the 30 fps cap as the quiet handheld target.
+- Not tried on the X20: confirming Armoury Crate Turbo while plugged in; D3D12 with FSR frame generation (its added latency is tolerable in turn-based combat); a lower fixed cap if the frame-rate setting offers one.
+- 4K texture pack (`LostOdyssey4k-Remaster-1vierock.rar`: 11 GB → 17.2 GB, 8,347 `.lotex2` plus `4K/mod.ini`, no executables). It goes in the game's `mods/` and is toggled in Settings → System → Mods. Not installed anywhere yet. exFAT/FAT32 drives can't dedup the disc data (≈22 GB instead of ≈16 GB).
+
 ## Risks and open questions
 
 - **Native path untested upstream.** We bypass `build_linux_arm64.sh`. Unknown: does `cmake/LoOptimization.cmake` add x86 flags on aarch64 if `LO_TARGET_ARCH` is missing? (We pass it.)

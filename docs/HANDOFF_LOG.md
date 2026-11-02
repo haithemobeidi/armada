@@ -52,3 +52,22 @@ Summary field hard cap ~300 chars. Fact-grade detail lives in `SESSION_LEDGER.md
 2026-11-01 14:22 | Side project LO (session 9, mini-wrap) | 720 internal → ~40 fps (user) = GPU-bound, FSR worth it (L-31). Audio choppiness = SDL queue starving ~47×/s; local patch gives ARM64 Linux Android's 8-frame queue (`~/src/lo-logs/lo-audio-queue.patch`), rebuilt in 33 s and installed beside the running game; verify `starved=` on next launch. Revert: `git -C ~/src/LostOdysseyRecomp checkout LostOdysseyRecomp/apu/audio.cpp`, rebuild, copy. | green
 2026-11-01 14:30 | Side project LO (session 9, mini-wrap) | FSR 3.1 built into LO from upstream CI's `fsr-vulkan-build-inputs` artifact (run 40251890719; SDK c6efa6b; generating on the PC was refused by the permission check), 46 s rebuild, installed with the audio-queue patch. L-31 open until the FSR vs native measurement. Revert: `-DLO_ENABLE_FSR=OFF`, rebuild, copy. | green
 2026-11-01 15:25 | Save transfer (session 9, mini-wrap) | User chose on-demand transfer over always-on sync: LocalSend 1.18.2 installed on the Odin (Flathub, system) with `~/Games` access; to be added to Steam by the user and installed on the X20. Saves re-copied to `OneDrive\Desktop\LO\saves-from-odin-2026-11-01` (15:03, hashes match). Revert in CURRENT_STATE Device. | green
+
+## 2026-11-01 20:48 | Side project LO + save transfer (session 9, closing wrap; delta since 15:25)
+**Status:** green
+- `check-delta.sh` OK (35 delta files) and secret scan clean, 20:48. No device changes since 15:25.
+- `check-file-caps`, `ledger-archive`, `check-ledger-refs`, `end-derive` and `check-payload-budget` don't exist in this repo (L-28). The ledger refs were checked by hand: every ID cited in CURRENT_STATE is open.
+
+**Changed:**
+- **X20 comparison (user reports, official Windows v1.1.0, everything maxed):** FSR Native AA 30 fps (likely the cap); Quality ~50; Balanced 30–50, with the GPU at ~99 % in one heavy area. Lowering shadow resolution, culling and AO barely helped. So LO is GPU-heavy on x86 too, not only through FEX/Turnip, and the Odin's 30 cap stands. Written up in `docs/LOST_ODYSSEY.md` → Other devices, with the 4K pack facts.
+- **Save sync:** the user now leans toward Syncthing ("a background service on both that runs that i control"), reversing the 15:25 on-demand pick. The ROADMAP backlog item is rewritten with the plan; timing and whether to keep LocalSend are still open.
+- L-31 narrowed to the FSR vs native 720 check at 30 fps. L-32 kbdoc queued (CI-artifact inputs; reflink-blind dedup).
+
+**Next:** L-31 on the Odin. The user plays LO at the 30 cap: FSR Quality, then native 720, same scene, for a few minutes each. Read `armada-power status` (°C, PWM) at each point, ask for the user's ear, and grep `starved=` in the newest `~/Games/LostOdysseyRecomp/logs/runtime-*.log`. Then B4 L-25: a 60-min sleep re-baseline on `20261031.8a72944`.
+
+**If it fails:**
+- If `starved=` still climbs ~47×/s, the binary in `~/Games` predates the patch. Compare its sha against `~/src/LostOdysseyRecomp/out/.../LostOdysseyRecomp`, or try 16 frames.
+- If FSR doesn't show in Settings → Graphics → Anti-aliasing, the installed binary is the pre-FSR one; re-copy it from the build tree.
+- If the user picks Syncthing, set it up as a user unit (pause-point). LocalSend's revert is in CURRENT_STATE.
+
+**Confirm:** whether the user chose Syncthing (and when) or kept LocalSend, and that LO's `settings.ini` has `ambient_occlusion=0` and `ask_compact_game_data=0`. Both were advised, neither verified.

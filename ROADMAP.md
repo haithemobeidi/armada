@@ -150,7 +150,12 @@ Enable Actions on the fork, repoint `ghcr.io/armada-os/armada` refs, confirm whe
 
 ## Backlog (ideas, not commitments)
 
-- **Save transfer for native recomps across devices** (user, 2026-11-01; **set up after the next recomp build**): Odin ↔ desktop PC ↔ ROG Xbox Ally X20 (Windows). **User wants on-demand, not always-on**: "drop into a box, pick a device", launched from the Steam library, nothing running in the background (rejected: Syncthing). Step 1: **LocalSend** (open source, AirDrop-like; Flathub `org.localsend.localsend_app` has aarch64; Windows build for the X20/PC), added to Steam as a non-Steam app on each handheld; receiver lands files in an inbox, user moves `userNN` into the game's `save/`. Step 2 only if that chafes: a small game-aware "Save Shuttle" (per-recomp save paths per device — LO: Odin `~/Games/LostOdysseyRecomp/save/userNN/`, Windows ZIP `save\` beside the exe — newest-save display, backup before overwrite).
+- **Save transfer for native recomps across devices** (user, 2026-11-01): Odin ↔ desktop PC ↔ ROG Xbox Ally X20 (Windows). **Latest lean (2026-11-01 evening): Syncthing after all**, reversing the on-demand pick below: "a background service on both that runs that i control". Still open with the user: set it up now or after the next recomp build, and whether LocalSend stays (installed on the Odin, revert in CURRENT_STATE). Syncthing plan:
+  - Odin: the official ARM64 binary in user space plus a user systemd unit (a pause-point, since it enables a service).
+  - PC and X20: Windows Syncthing.
+  - One shared folder per game's save directory, with file versioning on. LO: Odin `~/Games/LostOdysseyRecomp/save/`; Windows ZIP `save\` beside the exe.
+
+  Earlier on-demand route (fallback): "drop into a box, pick a device", launched from the Steam library, nothing running in the background. Step 1: **LocalSend** (open source, AirDrop-like; Flathub `org.localsend.localsend_app` has aarch64; Windows build for the X20/PC), added to Steam as a non-Steam app on each handheld; receiver lands files in an inbox, user moves `userNN` into the game's `save/`. Step 2 only if that chafes: a small game-aware "Save Shuttle" (per-recomp save paths per device — LO: Odin `~/Games/LostOdysseyRecomp/save/userNN/`, Windows ZIP `save\` beside the exe — newest-save display, backup before overwrite).
 - Correct the SM8750 cluster table upstream (kernel tops the prime cores at 4089.6 MHz; the repo's tiers assume 4320).
 - `armada-powerd`: make `[fan_curve.*]` and `[underclock.*]` defaults device-scoped (`ayn-odin-3.conf`) instead of global — the Phase 4 idea from the first assessment.
 - Investigate why `power_supply/battery/power_now` reports ~67.8 W while current×voltage gives ~4.7 W (unit or scaling bug; matters for B4 logging).
