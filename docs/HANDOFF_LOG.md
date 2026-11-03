@@ -71,3 +71,4 @@ Summary field hard cap ~300 chars. Fact-grade detail lives in `SESSION_LEDGER.md
 - If the user picks Syncthing, set it up as a user unit (pause-point). LocalSend's revert is in CURRENT_STATE.
 
 **Confirm:** whether the user chose Syncthing (and when) or kept LocalSend, and that LO's `settings.ini` has `ambient_occlusion=0` and `ask_compact_game_data=0`. Both were advised, neither verified.
+2026-11-02 11:20 | Game mod (session 10, mini-wrap) | Final Fantasy Resonance (Steam 3259780, build 24250053): Nexus mod 191 HD Sprite Remaster v1.0.3 installed in `FFRS/Content/Paks/`, 2x first, then replaced by 4x at the user's request (`FFRS_HD4x_5_P.{pak,ucas,utoc}`, 23.4 GB); zip scp'd and unpacked on the device (CRC clean). User reports: "its good". Revert: delete the 3 files. | green

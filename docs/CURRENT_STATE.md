@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-11-01 20:48 (session 9 closing wrap — LO runs natively with FSR 3.1 and an audio patch; X20 comparison recorded; save-sync choice open)
+**Last updated:** 2026-11-02 11:20 (session 10 mini-wrap — FF Resonance HD Sprite Remaster 4x installed, user-verified; NEXT ACTION unchanged)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -46,6 +46,11 @@ Then **B4 L-25** resumes. First re-baseline a 60-min sleep on the new image `202
   - firewalld is inactive (port 53317 open).
   - The save-sync choice is open: the user now leans toward Syncthing (ROADMAP backlog), so LocalSend may go.
   - Revert: `flatpak override --user --reset org.localsend.localsend_app; sudo flatpak uninstall org.localsend.localsend_app; sudo flatpak uninstall --unused`.
+- **Final Fantasy Resonance** (Steam 3259780, build 24250053, internal storage, Proton) carries the mod **FFRS HD Sprite Remaster 4x v1.0.3** (Nexus mod 191, by Pompoko), installed 2026-11-02 (the 2x edition went in first, then was replaced at the user's request).
+  - The 3 files `FFRS_HD4x_5_P.{pak,ucas,utoc}` (23.4 GB) sit in `…/common/FINAL FANTASY RESONANCE/FFRS/Content/Paks/` beside the stock paks.
+  - Tested by its author on build 24250053. A game update may break it; re-check after one. Never install the 2x edition next to it.
+  - 4x textures load more VRAM/RAM than 2x; if the game stutters or the fan rises, the 2x zip is still in the PC's Downloads.
+  - Revert: delete those 3 files. Nothing in `/etc`, no services.
 - Test scripts remain in `/var/tmp`: `sleep60.sh` is tagged `-60min-newkernel-nohook`; edit the tag per run.
 
 ## Active blockers
