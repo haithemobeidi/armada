@@ -66,13 +66,15 @@
 - [ ] L-30 (2026-11-01) D-7: the bootloader changed under us — Armada auto-updated the Odin to OpenABL 1.2 (2026-10-25; always on since upstream d506d11, no toggle), replacing the ROCKNIX ABL `abl/` and the DEVICE.md recovery ladder assume. Re-check the ladder on OpenABL (VOL- boot-source toggle, Android boot, "UNINSTALL CFW", restore of the stock backup), update `abl/` notes, and confirm L-4's stock backup still restores. Done when the ladder is verified or rewritten for OpenABL.
 - [x] L-31 (2026-11-01) LO: set internal resolution 720 on the unpinned Performance profile (same scene) and read FPS; if it rises clearly above 30, build FSR into LO (`-DLO_ENABLE_FSR=ON` + the FidelityFX SDK and Vulkan FSR shaders, as upstream CI's fetch steps) and compare 720→1080 FSR vs 1080 native in FPS / °C / PWM. Done when the test is recorded and FSR is built or ruled out. Data: `docs/LOST_ODYSSEY.md` First play.
   → DONE 2026-11-02: 720 gave 60+ fps; FSR built; user plays at the 30 cap, reports fine; comparison dropped (user's call).
-- [ ] L-32 (2026-11-01) kbdoc: two additions to the KB lesson `native-arm64-build-on-the-device.md` from the LO work.
+- [x] L-32 (2026-11-01) kbdoc: two additions to the KB lesson `native-arm64-build-on-the-device.md` from the LO work.
   (a) When a build input comes from a platform-locked generator (Windows-only exes), take it from upstream CI's uploaded artifact instead; check the release run's artifacts first.
   (b) Dedup checks by inode or hard-link count treat btrfs reflinks as duplicates, so a "free space" offer repeats forever; `du` can't see reflink sharing either.
   Done when both are in the KB and `kb-browser.html` is rebuilt.
-- [ ] L-33 (2026-11-02) kbdoc: two Windows-and-shell traps from session 10, new KB lessons (none exists).
+  → DONE 2026-11-03: KB `113d272`.
+- [x] L-33 (2026-11-02) kbdoc: two Windows-and-shell traps from session 10, new KB lessons (none exists).
   (a) `pathlib.Path.write_text()` on Windows writes every `
 ` as `
 `: a read-modify-write flips an LF repo file to CRLF and the next exact multi-line match fails. Use `write_bytes` or `newline=""`.
   (b) A `pgrep -f <token>` "is it running" guard matches your own helper whose command line carries the token (an inhibitor named `ffrs-mod`). Match the exact executable instead.
   Done when both are in the KB and `kb-browser.html` is rebuilt.
+  → DONE 2026-11-03: KB `113d272`.

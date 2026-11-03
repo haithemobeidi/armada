@@ -12,7 +12,7 @@
 - Image is `20261101.648e7ef` (2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`.
 - If the user applies a newer daily build first, baseline on that one and name it.
 
-B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for LO: L-29. KB additions: L-32, L-33.
+B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for LO: L-29.
 
 **Current phase:** B4 Battery + sleep (L-25) (the statusline parses this line)
 
@@ -58,7 +58,7 @@ None. Device/repo parity: overlay v3 on both (checked 2026-11-01).
 
 ## Open loops
 
-L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 + L-33 (kbdoc), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
+L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
 
 ## Owner rules and measurement notes
 
