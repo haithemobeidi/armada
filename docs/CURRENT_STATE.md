@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-11-02 22:55 (session 10 mini-wrap — FF Resonance HD Sprite Remaster 4x installed; daily "Apply" explained; L-31 closed by the user, NEXT ACTION is L-25)
+**Last updated:** 2026-11-02 23:58 (session 10 closing wrap — FF Resonance HD Sprite Remaster 4x installed and user-verified; the daily Steam "Apply" explained; LO closed (L-31); NEXT ACTION is L-25)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -12,16 +12,16 @@
 - Image is `20261101.648e7ef` (2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`.
 - If the user applies a newer daily build first, baseline on that one and name it.
 
-LO is closed for now: the user plays at the 30 cap and reports it fine (L-31 done). B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for the game: L-29. KB additions: L-32.
+B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for LO: L-29. KB additions: L-32, L-33.
 
 **Current phase:** B4 Battery + sleep (L-25) (the statusline parses this line)
 
 **Build status:** working
-- `tools/check-delta.sh` OK and secret scan clean, 2026-11-01 20:48 (35 delta files).
-- Game: LostOdysseyRecomp v1.1.0 aarch64 with FSR 3.1, the local audio-queue patch and native DXC. `ldd` clean; boots on Vulkan (Adreno 830), 2026-11-01. The audio patch's effect is not measured yet.
+- `tools/check-delta.sh` OK and secret scan clean, 2026-11-02 23:58 (35 delta files). This session changed docs only.
+- Games on the Odin: LostOdysseyRecomp v1.1.0 aarch64 (FSR 3.1, local audio-queue patch, native DXC) — user plays it at the 30 cap and reports it fine (2026-11-02); per-mode cost and `starved=` unmeasured. FF Resonance with the 4x sprite mod — user reports good (2026-11-02).
 
 **Remote:**
-- `odin3-tuning` was rebased onto `upstream/main` = `410bcf2` on 2026-09-28. `upstream/main` is **328 commits ahead** (2026-11-01); rebase at a quiet point.
+- `odin3-tuning` was rebased onto `upstream/main` = `410bcf2` on 2026-09-28. `upstream/main` = `d4f6880` is **355 commits ahead** (2026-11-02); rebase at a quiet point.
 - `main` = `origin/main` (mirror, untouched).
 - **Other machine: `git fetch && git reset --hard origin/odin3-tuning`, not `git pull`.**
 
@@ -58,7 +58,7 @@ None. Device/repo parity: overlay v3 on both (checked 2026-11-01).
 
 ## Open loops
 
-L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 (kbdoc), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
+L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 + L-33 (kbdoc), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
 
 ## Owner rules and measurement notes
 
@@ -71,5 +71,8 @@ L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 (kbdoc
 - **No background polling loops from the PC.** Windows Terminal crashed twice (2026-11-01) while PC-side SSH watcher loops ran; the cause is unproven. Detach long jobs on the device with a log and check on demand. The fan dropping is the user's "done" signal.
 - The device falls asleep a few minutes after the user stops touching it. Ask them to keep it awake before any SSH read sequence, or hold a temporary `systemd-inhibit` as root for long jobs and release it after.
 - `odin.py push` never deletes a dropped overlay file — remove it on the device by hand.
-- The % gauge is unreliable above ~90 %. From Git Bash, `odin.py put`/`get` need `MSYS_NO_PATHCONV=1`.
+- The % gauge is unreliable above ~90 %. From Git Bash, `odin.py put`/`get` need `MSYS_NO_PATHCONV=1`, and then the local path must be Windows-style (`C:/…`), not `/c/…`.
+- `odin.py put` is text-only. Binaries go by plain `scp` with the `SSH_OPTS` from `odin.py` (~90 MB/s on the LAN, 2026-11-02); unpack archives on the device.
+- "Is the game running" guards match the game's `.exe` (`pgrep -af 'FFRS[^ ]*\.exe'`), never a bare title token that a helper's command line can carry.
+- OS updates: the user applies Preview builds at their own pace, not daily. What a build changes = `git log <booted-hash>..<offered-hash>` on `upstream/main` (the hash is the version suffix).
 - The SD card is ext4 (Armada game storage), mounted at `/run/media/armada/SD`. If the Android side offers to format it, decline — the Steam library lives there.

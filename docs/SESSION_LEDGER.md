@@ -70,3 +70,9 @@
   (a) When a build input comes from a platform-locked generator (Windows-only exes), take it from upstream CI's uploaded artifact instead; check the release run's artifacts first.
   (b) Dedup checks by inode or hard-link count treat btrfs reflinks as duplicates, so a "free space" offer repeats forever; `du` can't see reflink sharing either.
   Done when both are in the KB and `kb-browser.html` is rebuilt.
+- [ ] L-33 (2026-11-02) kbdoc: two Windows-and-shell traps from session 10, new KB lessons (none exists).
+  (a) `pathlib.Path.write_text()` on Windows writes every `
+` as `
+`: a read-modify-write flips an LF repo file to CRLF and the next exact multi-line match fails. Use `write_bytes` or `newline=""`.
+  (b) A `pgrep -f <token>` "is it running" guard matches your own helper whose command line carries the token (an inhibitor named `ffrs-mod`). Match the exact executable instead.
+  Done when both are in the KB and `kb-browser.html` is rebuilt.
