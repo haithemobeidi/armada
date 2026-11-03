@@ -13,7 +13,7 @@
 - Compare FSR Quality against native 720 at 30 fps: °C, fan PWM, and the user's ear.
 - Read `starved=` in `~/Games/LostOdysseyRecomp/logs/runtime-*.log` to confirm the audio patch.
 
-Then **B4 L-25** resumes. First re-baseline a 60-min sleep on the new image `20261031.8a72944`; the 0.17 W figure was measured on `20260928.410bcf2`. B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for the game: L-29. KB additions: L-32.
+Then **B4 L-25** resumes. First re-baseline a 60-min sleep on the current image (`20261101.648e7ef` on 2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`. B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for the game: L-29. KB additions: L-32.
 
 **Current phase:** B4 Battery + sleep (L-25), with side project LO at its FSR check (L-31) (the statusline parses this line)
 
@@ -31,7 +31,7 @@ Then **B4 L-25** resumes. First re-baseline a 60-min sleep on the new image `202
 ## Device
 
 - **IP `192.168.1.189`** (DHCP moved it from `.188`; `odin.py` default updated). To find it again, scan the LAN for port 22 / Atheros OUI `00-03-7f` (`docs/DEVICE.md` → Access).
-- **Image `20261031.8a72944`** (`armada:testing`, kernel 7.2.6), updated by the user via Steam; read 2026-11-01.
+- **Image `20261101.648e7ef`** (`armada:testing`, kernel 7.2.6), updated by the user via Steam and finalized at the 09:54 reboot on 2026-11-02; rollback `20261031.8a72944`. The daily "Apply" is a new `testing` build each day, not a failed apply (`20261102.d4f6880` offered that night).
   - Steam client is on Beta (`publicbeta`, 2026-10-29 build) via "Preview".
   - Known cosmetic QAM dropdown shift (upstream #802); the user keeps it.
 - **Bootloader: OpenABL 1.2** since 2026-10-25 (Armada auto-update). The recovery ladder is unverified on it (L-30).
