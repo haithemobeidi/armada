@@ -122,7 +122,8 @@ Same scene, LO settings `internal_resolution=1080`, `frame_rate=120`, vsync on. 
 
 - Upstream's FSR Vulkan inputs are generated **on Windows** (`tools/fsr/generate_shaders.py` drives AMD's `FidelityFX_SC.exe` + `glslangValidator.exe` from the SDK's `binary_store`; "run on Windows, consume anywhere"). Running those downloaded executables on the PC was refused by Claude Code's permission check, so we used **upstream CI's own artifact** instead: run `40251890719` (v1.1.0 release), artifact `fsr-vulkan-build-inputs` (22.2 MB, expires 2027-01-24; `gh run download 40251890719 -R freefrank/LostOdysseyRecomp -n fsr-vulkan-build-inputs`). Its `fsr-shaders-vk/manifest.json` names SDK `c6efa6b` (the pin); only `fsr-shaders-vk/` + `deps/fidelityfx-sdk/{sdk,ffx-api,LICENSE.txt}` went to the device (`~/src/LostOdysseyRecomp/out/`), no DX12 parts or DLLs.
 - Configure: `-DLO_ENABLE_FSR=ON -DLO_REQUIRE_FSR=ON -DLO_FSR_SDK_ROOT=$PWD/out/deps/fidelityfx-sdk -DLO_FSR_SHADER_DIR=$PWD/out/fsr-shaders-vk` (REQUIRE makes a bad input fatal). Rebuild 46 s; binary 101 MB, `ldd` clean; `licenses/LICENSE-FidelityFX.txt` copied beside it. Windows path trap on the PC: the scratchpad path breaks MAX_PATH for git clones (mapped it with `subst`), and Git Bash rewrites `/`-leading sparse-checkout patterns (`MSYS_NO_PATHCONV=1`).
-- Revert: reconfigure with `-DLO_ENABLE_FSR=OFF`, rebuild, copy the binary. Open: FPS / °C / PWM with FSR 720→1080 vs native 720 and 1080.
+- Revert: reconfigure with `-DLO_ENABLE_FSR=OFF`, rebuild, copy the binary.
+- 2026-11-02, user reports: plays fine at the 30 fps cap. The FSR vs native 720 / 1080 comparison (FPS / °C / PWM) was dropped at the user's call, so the cost of each mode is unmeasured. The audio patch's `starved=` count was not read.
 
 ## Other devices: ROG Xbox Ally X20 (Windows), 2026-11-01
 

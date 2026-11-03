@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-11-02 11:20 (session 10 mini-wrap — FF Resonance HD Sprite Remaster 4x installed, user-verified; NEXT ACTION unchanged)
+**Last updated:** 2026-11-02 22:55 (session 10 mini-wrap — FF Resonance HD Sprite Remaster 4x installed; daily "Apply" explained; L-31 closed by the user, NEXT ACTION is L-25)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -8,14 +8,13 @@
 
 ## 📍 NEXT ACTION
 
-**L-31: Lost Odyssey FSR check on the Odin at the user's 30 fps cap.**
-- FSR is built (720 → 1080). 720 internal alone gave 60+ fps uncapped, so the game is GPU-bound.
-- Compare FSR Quality against native 720 at 30 fps: °C, fan PWM, and the user's ear.
-- Read `starved=` in `~/Games/LostOdysseyRecomp/logs/runtime-*.log` to confirm the audio patch.
+**B4 L-25: re-baseline a 60-min sleep on the current image**, then go below 0.17 W.
+- Image is `20261101.648e7ef` (2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`.
+- If the user applies a newer daily build first, baseline on that one and name it.
 
-Then **B4 L-25** resumes. First re-baseline a 60-min sleep on the current image (`20261101.648e7ef` on 2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`. B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for the game: L-29. KB additions: L-32.
+LO is closed for now: the user plays at the 30 cap and reports it fine (L-31 done). B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for the game: L-29. KB additions: L-32.
 
-**Current phase:** B4 Battery + sleep (L-25), with side project LO at its FSR check (L-31) (the statusline parses this line)
+**Current phase:** B4 Battery + sleep (L-25) (the statusline parses this line)
 
 **Build status:** working
 - `tools/check-delta.sh` OK and secret scan clean, 2026-11-01 20:48 (35 delta files).
@@ -59,7 +58,7 @@ None. Device/repo parity: overlay v3 on both (checked 2026-11-01).
 
 ## Open loops
 
-L-31 (LO FSR check), L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 (kbdoc), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
+L-25, L-30 (OpenABL recovery ladder), L-29 (upstream reports, game), L-32 (kbdoc), L-22 (parked), L-28 (template resync, user's call), L-3, L-4, L-5, L-6, L-13, L-15, L-16 — see `docs/SESSION_LEDGER.md`.
 
 ## Owner rules and measurement notes
 
