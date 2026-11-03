@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-11-02 23:58 (session 10 closing wrap — FF Resonance HD Sprite Remaster 4x installed and user-verified; the daily Steam "Apply" explained; LO closed (L-31); NEXT ACTION is L-25)
+**Last updated:** 2026-11-03 (session 11 mini-wrap — FF Resonance HD Sprite Remaster 4x updated v1.0.3 → v1.0.4 and user-verified; NEXT ACTION is still L-25)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -18,7 +18,7 @@ B3 has its first data point: pinned Performance costs ~10 °C and half the fan f
 
 **Build status:** working
 - `tools/check-delta.sh` OK and secret scan clean, 2026-11-02 23:58 (35 delta files). This session changed docs only.
-- Games on the Odin: LostOdysseyRecomp v1.1.0 aarch64 (FSR 3.1, local audio-queue patch, native DXC) — user plays it at the 30 cap and reports it fine (2026-11-02); per-mode cost and `starved=` unmeasured. FF Resonance with the 4x sprite mod — user reports good (2026-11-02).
+- Games on the Odin: LostOdysseyRecomp v1.1.0 aarch64 (FSR 3.1, local audio-queue patch, native DXC) — user plays it at the 30 cap and reports it fine (2026-11-02); per-mode cost and `starved=` unmeasured. FF Resonance with the 4x sprite mod v1.0.4. The user reports the game looks fine (2026-11-03).
 
 **Remote:**
 - `odin3-tuning` was rebased onto `upstream/main` = `410bcf2` on 2026-09-28. `upstream/main` = `d4f6880` is **355 commits ahead** (2026-11-02); rebase at a quiet point.
@@ -45,10 +45,11 @@ B3 has its first data point: pinned Performance costs ~10 °C and half the fan f
   - firewalld is inactive (port 53317 open).
   - The save-sync choice is open: the user now leans toward Syncthing (ROADMAP backlog), so LocalSend may go.
   - Revert: `flatpak override --user --reset org.localsend.localsend_app; sudo flatpak uninstall org.localsend.localsend_app; sudo flatpak uninstall --unused`.
-- **Final Fantasy Resonance** (Steam 3259780, build 24250053, internal storage, Proton) carries the mod **FFRS HD Sprite Remaster 4x v1.0.3** (Nexus mod 191, by Pompoko), installed 2026-11-02 (the 2x edition went in first, then was replaced at the user's request).
+- **Final Fantasy Resonance** (Steam 3259780, build 24250053, internal storage, Proton) carries the mod **FFRS HD Sprite Remaster 4x v1.0.4** (Nexus mod 191, by Pompoko). v1.0.3 went in on 2026-11-02 (2x first, then replaced by 4x at the user's request). It was overwritten by v1.0.4 on 2026-11-03: same file names, and the README says to overwrite.
   - The 3 files `FFRS_HD4x_5_P.{pak,ucas,utoc}` (23.4 GB) sit in `…/common/FINAL FANTASY RESONANCE/FFRS/Content/Paks/` beside the stock paks.
   - Tested by its author on build 24250053. A game update may break it; re-check after one. Never install the 2x edition next to it.
-  - 4x textures load more VRAM/RAM than 2x; if the game stutters or the fan rises, the 2x zip is still in the PC's Downloads.
+  - 4x textures load more VRAM/RAM than 2x; if the game stutters or the fan rises, re-download the 2x edition. The user deleted the 2x zips on 2026-11-03; only the 4x v1.0.4 zip is kept in the PC's Downloads.
+  - Update recipe (2026-11-03): scp the zip to a staging folder on the same btrfs mount (`steamapps/ffrs-104/`), unzip there (CRC-checked), check the game isn't running, `mv` the 3 files over the old ones, and delete the staging folder. Hold a root `systemd-run --unit=ffrs-inhibit systemd-inhibit …` for the duration. `df` reads ~24 GB high until a `btrfs filesystem sync`; that is lazy freeing, not a leak.
   - Revert: delete those 3 files. Nothing in `/etc`, no services.
 - Test scripts remain in `/var/tmp`: `sleep60.sh` is tagged `-60min-newkernel-nohook`; edit the tag per run.
 
