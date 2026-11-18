@@ -1,6 +1,6 @@
 # armada-odin3 — Current State
 
-**Last updated:** 2026-11-03 (session 11 mini-wrap — FF Resonance HD Sprite Remaster 4x updated v1.0.3 → v1.0.4 and user-verified; NEXT ACTION is still L-25)
+**Last updated:** 2026-11-17 (session 12 — Cemu + Wind Waker HD set up on the Odin, audio fixed and user-verified; FF Resonance 4x mod v1.0.5 installed 2026-11-06; image `20261106.d5f0724`; NEXT ACTION is still L-25)
 
 > This file carries only the **NEXT ACTION** + current state. It does **NOT** keep a copy of the block list — that lives in the "📊 Status at a glance" spine in `ROADMAP.md`.
 
@@ -9,7 +9,7 @@
 ## 📍 NEXT ACTION
 
 **B4 L-25: re-baseline a 60-min sleep on the current image**, then go below 0.17 W.
-- Image is `20261101.648e7ef` (2026-11-02); the 0.17 W figure was measured on `20260928.410bcf2`.
+- Image is `20261106.d5f0724` (read 2026-11-06); the 0.17 W figure was measured on `20260928.410bcf2`.
 - If the user applies a newer daily build first, baseline on that one and name it.
 
 B3 has its first data point: pinned Performance costs ~10 °C and half the fan for no FPS gain. Upstream reports for LO: L-29.
@@ -18,7 +18,7 @@ B3 has its first data point: pinned Performance costs ~10 °C and half the fan f
 
 **Build status:** working
 - `tools/check-delta.sh` OK and secret scan clean, 2026-11-02 23:58 (35 delta files). This session changed docs only.
-- Games on the Odin: LostOdysseyRecomp v1.1.0 aarch64 (FSR 3.1, local audio-queue patch, native DXC) — user plays it at the 30 cap and reports it fine (2026-11-02); per-mode cost and `starved=` unmeasured. FF Resonance with the 4x sprite mod v1.0.4. The user reports the game looks fine (2026-11-03).
+- Games on the Odin: LostOdysseyRecomp v1.1.0 aarch64 (FSR 3.1, local audio-queue patch, native DXC) — user plays it at the 30 cap and reports it fine (2026-11-02); per-mode cost and `starved=` unmeasured. FF Resonance with the 4x sprite mod v1.0.5 (installed 2026-11-06, not yet checked in game; v1.0.4 was reported fine on 2026-11-03).
 
 **Remote:**
 - `odin3-tuning` was rebased onto `upstream/main` = `410bcf2` on 2026-09-28. `upstream/main` = `d4f6880` is **355 commits ahead** (2026-11-02); rebase at a quiet point.
@@ -30,7 +30,7 @@ B3 has its first data point: pinned Performance costs ~10 °C and half the fan f
 ## Device
 
 - **IP `192.168.1.189`** (DHCP moved it from `.188`; `odin.py` default updated). To find it again, scan the LAN for port 22 / Atheros OUI `00-03-7f` (`docs/DEVICE.md` → Access).
-- **Image `20261101.648e7ef`** (`armada:testing`, kernel 7.2.6), updated by the user via Steam and finalized at the 09:54 reboot on 2026-11-02; rollback `20261031.8a72944`. The daily "Apply" is a new `testing` build each day, not a failed apply (`20261102.d4f6880` offered that night).
+- **Image `20261106.d5f0724`** (`armada:testing`, kernel 7.2.6), updated by the user via Steam; rollback `20261106.931dd27`, nothing staged (`bootc status`, 2026-11-06). The daily "Apply" is a new `testing` build each day, not a failed apply.
   - Steam client is on Beta (`publicbeta`, 2026-10-29 build) via "Preview".
   - Known cosmetic QAM dropdown shift (upstream #802); the user keeps it.
 - **Bootloader: OpenABL 1.2** since 2026-10-25 (Armada auto-update). The recovery ladder is unverified on it (L-30).
@@ -45,12 +45,23 @@ B3 has its first data point: pinned Performance costs ~10 °C and half the fan f
   - firewalld is inactive (port 53317 open).
   - The save-sync choice is open: the user now leans toward Syncthing (ROADMAP backlog), so LocalSend may go.
   - Revert: `flatpak override --user --reset org.localsend.localsend_app; sudo flatpak uninstall org.localsend.localsend_app; sudo flatpak uninstall --unused`.
-- **Final Fantasy Resonance** (Steam 3259780, build 24250053, internal storage, Proton) carries the mod **FFRS HD Sprite Remaster 4x v1.0.4** (Nexus mod 191, by Pompoko). v1.0.3 went in on 2026-11-02 (2x first, then replaced by 4x at the user's request). It was overwritten by v1.0.4 on 2026-11-03: same file names, and the README says to overwrite.
+- **Final Fantasy Resonance** (Steam 3259780, build 24250053, internal storage, Proton) carries the mod **FFRS HD Sprite Remaster 4x v1.0.5** (Nexus mod 191, by Pompoko). v1.0.3 went in on 2026-11-02 (2x first, then replaced by 4x at the user's request). It was overwritten by v1.0.4 on 2026-11-03 and by v1.0.5 on 2026-11-06: same file names, and the README says to overwrite.
   - The 3 files `FFRS_HD4x_5_P.{pak,ucas,utoc}` (23.4 GB) sit in `…/common/FINAL FANTASY RESONANCE/FFRS/Content/Paks/` beside the stock paks.
   - Tested by its author on build 24250053. A game update may break it; re-check after one. Never install the 2x edition next to it.
-  - 4x textures load more VRAM/RAM than 2x; if the game stutters or the fan rises, re-download the 2x edition. The user deleted the 2x zips on 2026-11-03; only the 4x v1.0.4 zip is kept in the PC's Downloads.
+  - 4x textures load more VRAM/RAM than 2x; if the game stutters or the fan rises, re-download the 2x edition. The user deleted the 2x zips on 2026-11-03; the 4x v1.0.4 and v1.0.5 zips are in the PC's Downloads.
   - Update recipe (2026-11-03): scp the zip to a staging folder on the same btrfs mount (`steamapps/ffrs-104/`), unzip there (CRC-checked), check the game isn't running, `mv` the 3 files over the old ones, and delete the staging folder. Hold a root `systemd-run --unit=ffrs-inhibit systemd-inhibit …` for the duration. `df` reads ~24 GB high until a `btrfs filesystem sync`; that is lazy freeing, not a leak.
   - Revert: delete those 3 files. Nothing in `/etc`, no services.
+- **Cemu** (Armada Store AppImage `~/Applications/Cemu.AppImage`, pkgforge-dev nightly, SDL3, has the AArch64 recompiler; store-made Steam shortcut "Cemu") configured 2026-11-17; the user has run it and, after the audio fix below, hears sound:
+  - ROM: `~/ROMs/wiiu/The Legend of Zelda - The Wind Waker HD.wua` (USA, title `0005000010143500` v0, no update). That is also ES-DE's default ROM path; ES-DE is installed but has never been run.
+  - `~/.config/Cemu/settings.xml` (hand-written, so the first-run wizard is skipped): Vulkan, async shaders, fullscreen, game path above, no update check, no Discord, no Feral gamemode. Cemu ran once (12:26) and rewrote the file with every key.
+  - Graphic packs: community release `Github991` ("Cemu Graphic Packs: v991", 180 packs) unpacked into `~/.local/share/Cemu/graphicPacks/downloadedGraphicPacks/` with `version.txt`, the same layout as Cemu's in-app downloader. Only `WindWakerHD_Resolution` is enabled, preset `1920x1080 (Default)` = the panel's resolution (user's ask, 2026-11-17). Revert: `~/.config/Cemu/settings.xml.pre-1080p`, or set `<GraphicPack/>` again.
+  - 60 fps: not possible in Cemu (game locked to 30, no community pack). The native port [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp) has interpolated 60 fps and a linux-aarch64 AppImage. Offered on 2026-11-17; the user chose Cemu at 30 fps. Don't re-pitch unless asked.
+  - Controller: `controllerProfiles/controller0.xml` = GamePad (global default), `Odin3-Pro.xml` = Pro Controller. Both are Cemu's own generic SDL default mapping (positional: the right face button is Wii U A), bound to uuid `0_030079f6de280000ff11000001000000`. That is the SDL3 GUID of Steam's "Steam Virtual Gamepad" (evdev `Microsoft X-Box 360 pad 0`, 28de:11ff), which SDL shows only with `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1` (Steam sets it). InputPlumber exposes the Odin pad as a "Generic Steam Controller" (28de:12f0).
+  - `gameProfiles/0005000010143500.ini`: `controller1 = Odin3-Pro`. The game supports the Pro Controller (manual), which puts the Item and Map screens on the main screen. Cemu's shipped profile for this title is empty, so nothing is lost.
+  - Steam shortcut "The Legend of Zelda: The Wind Waker HD" (appid 3116933788), added via `SteamClient.Apps.AddShortcut` over the CEF debugger (127.0.0.1:8080), the same call Armada Store makes. Launch options `/usr/libexec/armada/armada-game-launch %command% -f -g "<rom>"`.
+  - Audio fix (2026-11-17, user-verified "it works"): the hand-written/rewritten `settings.xml` had `<Audio><api>0</api>` (DirectSound, absent on Linux) and an empty `<TVDevice>`, so Cemu opened no stream. Now `<api>3</api>` (Cubeb → PipeWire) and `<TVDevice>default</TVDevice>`; TV volume is Cemu's 20, the speaker sink 0.15. Revert: `~/.config/Cemu/settings.xml.pre-audio` (api only) or `.pre-tvdevice`. Edit the file only while Cemu is closed; it rewrites it on exit.
+  - No savestates in Cemu (not a feature); the game's own save is the only one. The menu bar needs a mouse, so changes go through `settings.xml` from here; a Steam Input stick-as-mouse layout is the offered fallback, not built.
+  - Revert: remove the shortcut in Steam, then `rm -rf ~/.config/Cemu ~/ROMs/wiiu`. After a first run, also `~/.local/share/Cemu` (mlc01, saves) and `~/.cache/Cemu` (shaders). Nothing in `/etc`, no services.
 - Test scripts remain in `/var/tmp`: `sleep60.sh` is tagged `-60min-newkernel-nohook`; edit the tag per run.
 
 ## Active blockers
